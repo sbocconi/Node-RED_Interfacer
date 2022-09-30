@@ -5,3 +5,9 @@
 .config.users.json
 flows_cred.json
 .credentials.sh
+extract_contracts.js
+.clean_creds.json
+.hosp_creds.json
+extract_contracts.zen
+MP-testing.log
+.admin_creds.json

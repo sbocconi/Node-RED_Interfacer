@@ -118,7 +118,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 610,
-        "y": 500,
+        "y": 760,
         "wires": []
     },
     {
@@ -126,12 +126,12 @@
         "type": "http in",
         "z": "a9cf961a3a52160c",
         "name": "Form",
-        "url": "/isolationgowns/login",
+        "url": "/interfacer/getHMAC",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 60,
+        "y": 80,
         "wires": [
             [
                 "01f2e8dd1ac14440"
@@ -139,40 +139,22 @@
         ]
     },
     {
-        "id": "d4b609db9190632b",
-        "type": "function",
-        "z": "a9cf961a3a52160c",
-        "name": "Retrieve id",
-        "func": "// Read the payload\nmsg.credentials = {};\nmsg.credentials.token = msg.payload.data.login.token;\n\n\n// Reset the headears\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\nmsg.headers['authorization'] = \"Bearer \" + msg.credentials.token;\n\n// These are already set and payload is not valid anymore\n// msg.url = msg.payload.endpoint;\n// msg.method = 'POST';\n\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query: `query{\n            myAgent{\n                id\n            }\n          }`,\n  variables: {}\n})\n\n\nreturn msg;\n\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 610,
-        "y": 60,
-        "wires": [
-            [
-                "232a28ed71fceec6"
-            ]
-        ]
-    },
-    {
         "id": "01f2e8dd1ac14440",
         "type": "function",
         "z": "a9cf961a3a52160c",
-        "name": "Login Agent",
-        "func": "\n\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\nconst variables = {\n    \"username\": msg.payload.username,\n    \"password\": msg.payload.password\n    \n};\n\n// To get this in the debug output\nmsg.variables = variables\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query: `mutation doLogin($username: String!, $password: String!) {\n            login(emailOrUsername: $username, password: $password) {\n                token\n            }\n          }`,\n  variables: variables\n})\n\nreturn msg;",
+        "name": "Get HMAC",
+        "func": "\n\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\n\nconst variables = {\n    \"firstRegistration\": true,\n    \"userData\": \"{\\\"email\\\": \\\"\" + msg.payload.email + \"\\\"}\"\n};\n\n// To get this in the debug output\nmsg.variables = variables\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query: `mutation ($firstRegistration: Boolean!, $userData: String!){\n  \n    keypairoomServer(firstRegistration: $firstRegistration, userData: $userData)\n      \n  }`,\n  variables: variables\n})\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
         "x": 250,
-        "y": 60,
+        "y": 80,
         "wires": [
             [
-                "ced9f63df845af74"
+                "ced9f63df845af74",
+                "beadd72e20548fee"
             ]
         ]
     },
@@ -190,32 +172,11 @@
         "proxy": "",
         "authType": "",
         "senderr": false,
-        "x": 410,
-        "y": 60,
+        "x": 450,
+        "y": 80,
         "wires": [
             [
-                "d4b609db9190632b"
-            ]
-        ]
-    },
-    {
-        "id": "232a28ed71fceec6",
-        "type": "http request",
-        "z": "a9cf961a3a52160c",
-        "name": "",
-        "method": "use",
-        "ret": "obj",
-        "paytoqs": "ignore",
-        "url": "",
-        "tls": "",
-        "persist": false,
-        "proxy": "",
-        "authType": "",
-        "senderr": false,
-        "x": 810,
-        "y": 60,
-        "wires": [
-            [
+                "beadd72e20548fee",
                 "bbeba4dd2bc281e6"
             ]
         ]
@@ -232,7 +193,7 @@
         "finalize": "",
         "libs": [],
         "x": 250,
-        "y": 220,
+        "y": 480,
         "wires": [
             [
                 "41a31f091965c362"
@@ -254,7 +215,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 220,
+        "y": 480,
         "wires": [
             [
                 "8aafa40d09d8bbe7"
@@ -282,7 +243,7 @@
         "to": "",
         "reg": false,
         "x": 620,
-        "y": 220,
+        "y": 480,
         "wires": [
             [
                 "7e3394bb6ca1da06"
@@ -301,7 +262,7 @@
         "finalize": "",
         "libs": [],
         "x": 260,
-        "y": 140,
+        "y": 400,
         "wires": [
             [
                 "cd0d405b431a7cdc"
@@ -323,7 +284,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 140,
+        "y": 400,
         "wires": [
             [
                 "122698bde7168a3b"
@@ -342,7 +303,7 @@
         "finalize": "",
         "libs": [],
         "x": 260,
-        "y": 580,
+        "y": 840,
         "wires": [
             [
                 "cf36936a5c75bfd6"
@@ -356,8 +317,8 @@
         "name": "",
         "statusCode": "",
         "headers": {},
-        "x": 1190,
-        "y": 60,
+        "x": 850,
+        "y": 80,
         "wires": []
     },
     {
@@ -365,14 +326,14 @@
         "type": "function",
         "z": "a9cf961a3a52160c",
         "name": "Format Reply",
-        "func": "// Read the payload\nmsg.credentials.id = msg.payload.data.myAgent.id;\n\n// Provide an answer\nmsg.payload = {};\nmsg.payload.token = msg.credentials.token;\nmsg.payload.id = msg.credentials.id;\n\nreturn msg;",
+        "func": "// Read the payload\nvar seed = msg.payload.data.keypairoomServer;\n\n// Provide an answer\nmsg.payload = {};\nmsg.payload.seed = seed;\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1020,
-        "y": 60,
+        "x": 640,
+        "y": 80,
         "wires": [
             [
                 "6196df0943914213"
@@ -389,7 +350,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 140,
+        "y": 400,
         "wires": [
             [
                 "cae81b35069f60a9"
@@ -404,7 +365,7 @@
         "statusCode": "",
         "headers": {},
         "x": 870,
-        "y": 140,
+        "y": 400,
         "wires": []
     },
     {
@@ -419,7 +380,7 @@
         "finalize": "",
         "libs": [],
         "x": 680,
-        "y": 140,
+        "y": 400,
         "wires": [
             [
                 "85edf2b45871f9bd"
@@ -433,7 +394,7 @@
         "name": "Perform Login of agents",
         "info": "",
         "x": 150,
-        "y": 20,
+        "y": 40,
         "wires": []
     },
     {
@@ -446,7 +407,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 220,
+        "y": 480,
         "wires": [
             [
                 "6b9a303ec68aaf47"
@@ -465,7 +426,7 @@
         "finalize": "",
         "libs": [],
         "x": 820,
-        "y": 220,
+        "y": 480,
         "wires": [
             [
                 "71f92c67ca67af48"
@@ -480,7 +441,7 @@
         "statusCode": "",
         "headers": {},
         "x": 970,
-        "y": 220,
+        "y": 480,
         "wires": []
     },
     {
@@ -491,7 +452,7 @@
         "statusCode": "",
         "headers": {},
         "x": 930,
-        "y": 440,
+        "y": 700,
         "wires": []
     },
     {
@@ -506,7 +467,7 @@
         "finalize": "",
         "libs": [],
         "x": 700,
-        "y": 440,
+        "y": 700,
         "wires": [
             [
                 "72c05c5c0bd10d12"
@@ -528,7 +489,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 440,
+        "y": 700,
         "wires": [
             [
                 "b582df30a9d2445c",
@@ -548,7 +509,7 @@
         "finalize": "",
         "libs": [],
         "x": 270,
-        "y": 440,
+        "y": 700,
         "wires": [
             [
                 "75ad1ae27b0775fb",
@@ -566,7 +527,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 440,
+        "y": 700,
         "wires": [
             [
                 "62fcaf5db019d842"
@@ -585,7 +546,7 @@
         "finalize": "",
         "libs": [],
         "x": 700,
-        "y": 580,
+        "y": 840,
         "wires": [
             [
                 "c3e3e6232d39d1b6"
@@ -607,7 +568,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 580,
+        "y": 840,
         "wires": [
             [
                 "6905f51ee38526b3",
@@ -623,7 +584,7 @@
         "statusCode": "",
         "headers": {},
         "x": 930,
-        "y": 580,
+        "y": 840,
         "wires": []
     },
     {
@@ -640,7 +601,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 610,
-        "y": 640,
+        "y": 900,
         "wires": []
     },
     {
@@ -653,7 +614,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 580,
+        "y": 840,
         "wires": [
             [
                 "e7f96084acdd0aa2"
@@ -668,7 +629,7 @@
         "statusCode": "",
         "headers": {},
         "x": 930,
-        "y": 720,
+        "y": 980,
         "wires": []
     },
     {
@@ -683,7 +644,7 @@
         "finalize": "",
         "libs": [],
         "x": 700,
-        "y": 720,
+        "y": 980,
         "wires": [
             [
                 "71e1a605b5ded04e"
@@ -705,7 +666,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 720,
+        "y": 980,
         "wires": [
             [
                 "78bbd41a6c118d6b",
@@ -727,7 +688,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 610,
-        "y": 780,
+        "y": 1040,
         "wires": []
     },
     {
@@ -740,7 +701,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 720,
+        "y": 980,
         "wires": [
             [
                 "e6a4ec239be873e1"
@@ -759,7 +720,7 @@
         "finalize": "",
         "libs": [],
         "x": 250,
-        "y": 720,
+        "y": 980,
         "wires": [
             [
                 "1f51d816c9254a8e",
@@ -775,7 +736,7 @@
         "statusCode": "",
         "headers": {},
         "x": 930,
-        "y": 840,
+        "y": 1100,
         "wires": []
     },
     {
@@ -790,7 +751,7 @@
         "finalize": "",
         "libs": [],
         "x": 700,
-        "y": 840,
+        "y": 1100,
         "wires": [
             [
                 "fe5db33a07f08de1"
@@ -812,7 +773,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 840,
+        "y": 1100,
         "wires": [
             [
                 "2fdd738ccee21e9c",
@@ -832,7 +793,7 @@
         "finalize": "",
         "libs": [],
         "x": 230,
-        "y": 840,
+        "y": 1100,
         "wires": [
             [
                 "9395b1d5f101d921",
@@ -854,7 +815,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 610,
-        "y": 900,
+        "y": 1160,
         "wires": []
     },
     {
@@ -867,7 +828,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 840,
+        "y": 1100,
         "wires": [
             [
                 "1239e8ccc0e65584",
@@ -883,7 +844,7 @@
         "statusCode": "",
         "headers": {},
         "x": 930,
-        "y": 960,
+        "y": 1220,
         "wires": []
     },
     {
@@ -898,7 +859,7 @@
         "finalize": "",
         "libs": [],
         "x": 700,
-        "y": 960,
+        "y": 1220,
         "wires": [
             [
                 "17b272e3686339f5"
@@ -920,7 +881,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 960,
+        "y": 1220,
         "wires": [
             [
                 "04a7b53f4308dcdd",
@@ -940,7 +901,7 @@
         "finalize": "",
         "libs": [],
         "x": 240,
-        "y": 960,
+        "y": 1220,
         "wires": [
             [
                 "9b5733fa43a0796d"
@@ -961,7 +922,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 610,
-        "y": 1020,
+        "y": 1280,
         "wires": []
     },
     {
@@ -974,7 +935,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 960,
+        "y": 1220,
         "wires": [
             [
                 "2db04210e5b35643"
@@ -988,7 +949,7 @@
         "name": "Create locations for agents",
         "info": "",
         "x": 150,
-        "y": 100,
+        "y": 360,
         "wires": []
     },
     {
@@ -998,7 +959,7 @@
         "name": "Create units of measurements for resources",
         "info": "",
         "x": 210,
-        "y": 180,
+        "y": 440,
         "wires": []
     },
     {
@@ -1008,7 +969,7 @@
         "name": "Create resources",
         "info": "",
         "x": 120,
-        "y": 400,
+        "y": 660,
         "wires": []
     },
     {
@@ -1018,7 +979,7 @@
         "name": "Create process to encapsulate events",
         "info": "",
         "x": 190,
-        "y": 540,
+        "y": 800,
         "wires": []
     },
     {
@@ -1028,7 +989,7 @@
         "name": "Create event Transfer-custody",
         "info": "",
         "x": 160,
-        "y": 680,
+        "y": 940,
         "wires": []
     },
     {
@@ -1038,7 +999,7 @@
         "name": "Create events with other actions",
         "info": "",
         "x": 170,
-        "y": 800,
+        "y": 1060,
         "wires": []
     },
     {
@@ -1055,7 +1016,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 610,
-        "y": 380,
+        "y": 640,
         "wires": []
     },
     {
@@ -1073,7 +1034,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 320,
+        "y": 580,
         "wires": [
             [
                 "21e3ef708e289378",
@@ -1093,7 +1054,7 @@
         "finalize": "",
         "libs": [],
         "x": 250,
-        "y": 320,
+        "y": 580,
         "wires": [
             [
                 "383d01758c0eab1c",
@@ -1113,7 +1074,7 @@
         "finalize": "",
         "libs": [],
         "x": 700,
-        "y": 320,
+        "y": 580,
         "wires": [
             [
                 "1e377a5f89c87589"
@@ -1130,7 +1091,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 90,
-        "y": 320,
+        "y": 580,
         "wires": [
             [
                 "a9dec105802ab695"
@@ -1145,7 +1106,7 @@
         "statusCode": "",
         "headers": {},
         "x": 930,
-        "y": 320,
+        "y": 580,
         "wires": []
     },
     {
@@ -1155,7 +1116,141 @@
         "name": "Create resources specification",
         "info": "",
         "x": 160,
-        "y": 280,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "beadd72e20548fee",
+        "type": "debug",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 590,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "930cd99125d1479e",
+        "type": "http response",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 850,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "8966a452ab67cbcd",
+        "type": "function",
+        "z": "a9cf961a3a52160c",
+        "name": "Format Reply",
+        "func": "// Read the payload\nvar id = msg.payload.data.createPerson.agent.id;\n\n// Provide an answer\nmsg.payload = {};\nmsg.payload.id = id;\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 240,
+        "wires": [
+            [
+                "930cd99125d1479e"
+            ]
+        ]
+    },
+    {
+        "id": "4f5171cd09d1c858",
+        "type": "http request",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "senderr": false,
+        "x": 450,
+        "y": 240,
+        "wires": [
+            [
+                "12b72845a3237505",
+                "8966a452ab67cbcd"
+            ]
+        ]
+    },
+    {
+        "id": "7f1cc66a89c6fe15",
+        "type": "function",
+        "z": "a9cf961a3a52160c",
+        "name": "Create Person",
+        "func": "\n\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\nmsg.headers['zenflows-admin'] = msg.payload.key;\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\n\nconst variables = {\n    \"person\": {\n        \"name\": msg.payload.name,\n        \"user\": msg.payload.username,\n        \"email\": msg.payload.email,\n        \"eddsaPublicKey\": msg.payload.eddsaPublicKey\n    }\n};\n\n// To get this in the debug output\nmsg.variables = variables\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query: `mutation ($person: PersonCreateParams!){\n        createPerson(person: $person)\n        {\n            agent{\n                id\n                name\n                user\n                email\n                eddsaPublicKey\n            }\n        }\n    }`,\n  variables: variables\n})\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 260,
+        "y": 240,
+        "wires": [
+            [
+                "4f5171cd09d1c858",
+                "12b72845a3237505"
+            ]
+        ]
+    },
+    {
+        "id": "12b72845a3237505",
+        "type": "debug",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 590,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "2bf52a3634071bdb",
+        "type": "http in",
+        "z": "a9cf961a3a52160c",
+        "name": "Form",
+        "url": "/interfacer/createPerson",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 90,
+        "y": 240,
+        "wires": [
+            [
+                "7f1cc66a89c6fe15"
+            ]
+        ]
+    },
+    {
+        "id": "aedd97c488d9aa52",
+        "type": "comment",
+        "z": "a9cf961a3a52160c",
+        "name": "Perform Login of agents",
+        "info": "",
+        "x": 150,
+        "y": 200,
         "wires": []
     }
 ]
