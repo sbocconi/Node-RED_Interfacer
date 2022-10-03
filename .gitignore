@@ -4,10 +4,12 @@
 .config.runtime.json
 .config.users.json
 flows_cred.json
-.credentials.sh
 extract_contracts.js
-.clean_creds.json
-.hosp_creds.json
-extract_contracts.zen
 MP-testing.log
-.admin_creds.json
+keypairoomClient.zen
+keypairoomClientRecreateKeys.zen
+sign.zen
+signFile.zen
+.creds_admin.json
+.creds_clean.json
+.creds_hosp.json

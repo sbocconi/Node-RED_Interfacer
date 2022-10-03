@@ -1,6 +1,6 @@
-hosp_cred_file=.hosp_creds.json
-cleaner_cred_file=.clean_creds.json
-admin_cred_file=.admin_creds.json
+hosp_cred_file=.creds_hosp.json
+cleaner_cred_file=.creds_clean.json
+admin_cred_file=.creds_admin.json
 
 admin_key="$(cat ${admin_cred_file} | jq -r '.key')"
 
@@ -65,13 +65,32 @@ exctcont_filename='extract_contracts'
 
 function update_field {
     orig_file=${1}
-    field=${2}
+    prefixed_field=${2}
     new_value=${3}
 
-    tmpfile=$(mktemp)
-    cp ${orig_file} "$tmpfile" &&
-    jq --arg field "$field" --arg newvalue "$new_value" '.[$field] |= $newvalue'  ${tmpfile} > ${orig_file} &&
-    rm -f -- "$tmpfile"
+    update_tmpfile=$(mktemp)
+    cp ${orig_file} "${update_tmpfile}" &&
+    # jq --arg field "$prefixed_field" --arg prefix "$prefix" --arg newvalue "$new_value" '.[$prefix].[$field] |= $newvalue'  ${update_tmpfile} > ${orig_file} &&
+    jq --argjson prefixed_field "$prefixed_field" --arg newvalue "${new_value}" 'setpath( $prefixed_field; $newvalue)' ${update_tmpfile} > ${orig_file} &&
+    rm -f -- "${update_tmpfile}"
+}
+
+function signRequest {
+    variables=${1}
+    query=${2}
+    zenKeysFile=${3}
+
+    sign_tmpfile=$(mktemp)
+    # echo ${sign_tmpfile}
+    echo "{\"a\":\"b\"}" > ${sign_tmpfile}
+    update_field "${sign_tmpfile}" "[\"variables\"]" "${variables}" &&
+    update_field "${sign_tmpfile}" "[\"query\"]" "${query}" &&
+    encoded=$(cat "${sign_tmpfile}" | jq tostring | base64) &&
+    update_field "${sign_tmpfile}" "[\"gql\"]" "${encoded}" &&
+    cp "${sign_tmpfile}" ss.json &&
+    json_result=$(~/bin/zenroom-osx.command -a "${sign_tmpfile}" -k ${zenKeysFile} -z sign.zen) &&
+    rm -f -- "${sign_tmpfile}" &&
+    echo ${json_result}
 }
 
 function getHMAC {
@@ -89,21 +108,21 @@ function createPerson {
 }
 
 function createLocation {
-    body="{\"token\" : \"${1}\", \"name\" : \"${2}\", \"lat\" : \"${3}\", \"long\" : \"${4}\", \"addr\" : \"${5}\", \"note\" : \"${6}\", \"endpoint\" : \"${my_endpoint}\" }"
-    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/location 2>/dev/null)
+    body="{\"eddsa\" : \"${1}\", \"username\" : \"${2}\", \"name\" : \"${3}\", \"lat\" : ${4}, \"long\" : ${5}, \"addr\" : \"${6}\", \"note\" : \"${7}\", \"endpoint\" : \"${my_endpoint}\" }"
+    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createLocation 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
 
 function createUnit {
-    body="{\"token\" : \"${1}\", \"label\" : \"${2}\", \"symbol\" : \"${3}\", \"endpoint\" : \"${my_endpoint}\" }"
+    body="{\"eddsa\" : \"${1}\", \"label\" : \"${2}\", \"symbol\" : \"${3}\", \"endpoint\" : \"${my_endpoint}\" }"
     result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/unit 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
 
 function createProcess {
-    body="{\"token\" : \"${1}\", \"process_name\" : \"${2}\", \"process_note\" : \"${3}\", \"endpoint\" : \"${my_endpoint}\" }"
+    body="{\"eddsa\" : \"${1}\", \"process_name\" : \"${2}\", \"process_note\" : \"${3}\", \"endpoint\" : \"${my_endpoint}\" }"
     result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/process 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
@@ -111,7 +130,7 @@ function createProcess {
 
 function transferCustody {
 
-    body="{\"token\" : \"${1}\", \"provider_id\" : \"${2}\", \"receiver_id\" : \"${3}\", \"resource_id\" : \"${4}\", \"unit_id\" : \"${5}\", \"amount\" : ${6}, \"location_id\" : \"${7}\", \"note\": \"${8}\", \"endpoint\" : \"${my_endpoint}\" }"
+    body="{\"eddsa\" : \"${1}\", \"provider_id\" : \"${2}\", \"receiver_id\" : \"${3}\", \"resource_id\" : \"${4}\", \"unit_id\" : \"${5}\", \"amount\" : ${6}, \"location_id\" : \"${7}\", \"note\": \"${8}\", \"endpoint\" : \"${my_endpoint}\" }"
     result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/transfer 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
@@ -119,14 +138,14 @@ function transferCustody {
 
 function createResourceSpec {
 
-    body="{\"token\" : \"${1}\", \"unit_id\" : \"${2}\", \"name\" : \"${3}\", \"note\" : \"${4}\", \"classification\" : \"${5}\", \"endpoint\" : \"${my_endpoint}\" }"
+    body="{\"eddsa\" : \"${1}\", \"unit_id\" : \"${2}\", \"name\" : \"${3}\", \"note\" : \"${4}\", \"classification\" : \"${5}\", \"endpoint\" : \"${my_endpoint}\" }"
     result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/resourcespec 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
 
 function createResource {
-    body="{\"token\" : \"${1}\", \"agent_id\" : \"${2}\", \"resource_name\" : \"${3}\", \"resource_id\" : \"${4}\", \"unit_id\" : \"${5}\", \"amount\" : ${6}, \"classification\": \"${7}\", \"endpoint\" : \"${my_endpoint}\" }"
+    body="{\"eddsa\" : \"${1}\", \"agent_id\" : \"${2}\", \"resource_name\" : \"${3}\", \"resource_id\" : \"${4}\", \"unit_id\" : \"${5}\", \"amount\" : ${6}, \"classification\": \"${7}\", \"endpoint\" : \"${my_endpoint}\" }"
     result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/resource 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
@@ -135,7 +154,7 @@ function createResource {
 function createEvent {
     
     action=${1}
-    common_body="\"action\" : \"${action}\", \"token\" : \"${2}\",  \"note\": \"${3}\", \"provider_id\" : \"${4}\", \"receiver_id\" : \"${5}\", \"unit_id\" : \"${6}\", \"amount\" : ${7}, \"endpoint\" : \"${my_endpoint}\""
+    common_body="\"action\" : \"${action}\", \"eddsa\" : \"${2}\",  \"note\": \"${3}\", \"provider_id\" : \"${4}\", \"receiver_id\" : \"${5}\", \"unit_id\" : \"${6}\", \"amount\" : ${7}, \"endpoint\" : \"${my_endpoint}\""
 
     case "${action}" in
         "work")
@@ -178,7 +197,7 @@ function traceTrack {
 ##### Get the contract from the checked-out repo
 ################################################
 tsc ./${exctcont_filename}.ts
-node ./${exctcont_filename}.js > ${exctcont_filename}.zen
+node ./${exctcont_filename}.js
 
 if [ "${hospital_id} " == "null " ]
 then
@@ -200,12 +219,12 @@ then
     fi
     echo "$(date) - Got seed for user hospital, seed: ${hospital_seed}"
     # jq --arg newhmac "$hospital_seed" '."seedServerSideShard.HMAC" |= $newhmac'  > ${hosp_cred_file}
-    update_field ${hosp_cred_file} "seedServerSideShard.HMAC" $hospital_seed
+    update_field ${hosp_cred_file} "[\"seedServerSideShard.HMAC\"]" $hospital_seed
 
     ################################################
     ##### Generate keys
     ################################################
-    result=$(~/bin/zenroom-osx.command -a ${hosp_cred_file} -z ${exctcont_filename}.zen)
+    result=$(~/bin/zenroom-osx.command -a ${hosp_cred_file} -z keypairoomClient.zen)
 
     if [ "${do_debug} " == "true " ]
         then
@@ -216,9 +235,9 @@ then
     seed=$(echo ${result} | jq -r '.seed')
     eddsa_public_key=$(echo ${result} | jq -r '.eddsa_public_key')
     eddsa_private_key=$(echo ${result} | jq -r '.keyring.eddsa')
-    update_field ${hosp_cred_file} "seed" "$seed"
-    update_field ${hosp_cred_file} "eddsa_public_key" "$eddsa_public_key"
-    update_field ${hosp_cred_file} "eddsa_private_key" "$eddsa_private_key"
+    update_field ${hosp_cred_file} "[\"seed\"]" "$seed"
+    update_field ${hosp_cred_file} "[\"eddsa_public_key\"]" "$eddsa_public_key"
+    update_field ${hosp_cred_file} "[\"keyring\",\"eddsa\"]" "$eddsa_private_key"
 
     ################################################
     ##### Create the person
@@ -231,7 +250,9 @@ then
         fi
 
     hospital_id=$(echo ${result} | jq -r '.result.id')
-    update_field ${hosp_cred_file} "id" "$hospital_id"
+    update_field ${hosp_cred_file} "[\"id\"]" "$hospital_id"
+else
+    echo "Data for hospital seems to be already available"
 fi
 
 if [ "${cleaner_id} " == "null " ]
@@ -252,12 +273,12 @@ then
         exit -1
     fi
     echo "$(date) - Got seed for user cleaner, seed: ${cleaner_seed}"
-    update_field ${cleaner_cred_file} "seedServerSideShard.HMAC" $cleaner_seed
+    update_field ${cleaner_cred_file} "[\"seedServerSideShard.HMAC\"]" $cleaner_seed
 
     ################################################
     ##### Generate keys
     ################################################
-    result=$(~/bin/zenroom-osx.command -a ${cleaner_cred_file} -z ${exctcont_filename}.zen)
+    result=$(~/bin/zenroom-osx.command -a ${cleaner_cred_file} -z keypairoomClient.zen)
 
     if [ "${do_debug} " == "true " ]
     then
@@ -268,9 +289,9 @@ then
     seed=$(echo ${result} | jq -r '.seed')
     eddsa_public_key=$(echo ${result} | jq -r '.eddsa_public_key')
     eddsa_private_key=$(echo ${result} | jq -r '.keyring.eddsa')
-    update_field ${cleaner_cred_file} "seed" "$seed"
-    update_field ${cleaner_cred_file} "eddsa_public_key" "$eddsa_public_key"
-    update_field ${cleaner_cred_file} "eddsa_private_key" "$eddsa_private_key"
+    update_field ${cleaner_cred_file} "[\"seed\"]" "$seed"
+    update_field ${cleaner_cred_file} "[\"eddsa_public_key\"]" "$eddsa_public_key"
+    update_field ${cleaner_cred_file} "[\"keyring\",\"eddsa\"]" "$eddsa_private_key"
 
     ################################################
     ##### Create the person
@@ -283,7 +304,9 @@ then
         fi
 
     cleaner_id=$(echo ${result} | jq -r '.result.id')
-    update_field ${cleaner_cred_file} "id" "$cleaner_id"
+    update_field ${cleaner_cred_file} "[\"id\"]" "$cleaner_id"
+else
+    echo "Data for cleaner seems to be already available"
 fi
 
 if [ "${do_init} " == "true " ] || [ ! -f "${init_file}" ]
@@ -292,8 +315,8 @@ then
     ################################################################################
     ##### Create locations and units of measures
     ################################################################################
-
-    result=$(createLocation ${hospital_seed} "${hospital_name}" ${hospital_lat} ${hospital_long} "${hospital_addr}" ${hospital_note})
+    eddsa=$(cat ${hosp_cred_file} | jq -r '.keyring.eddsa')
+    result=$(createLocation ${eddsa} "${hospital_username}" "${hospital_name}" ${hospital_lat} ${hospital_long} "${hospital_addr}" ${hospital_note})
     lochospital_id=$(echo ${result} | jq -r '.result.location')
     if [ "${do_debug} " == "true " ]
     then
@@ -301,16 +324,18 @@ then
         # echo "$(date) - lochospital_id is ${lochospital_id}" 
     fi
     echo "$(date) - Created location for ${hospital_name}, id: ${lochospital_id}"
-
     
-    result=$(createLocation ${cleaner_seed} "${cleaner_name}" ${cleaner_lat} ${cleaner_long} "${cleaner_addr}" ${cleaner_note})
-    loccleaner_id=$(echo ${result} | jq -r '.location')
+    eddsa=$(cat ${cleaner_cred_file} | jq -r '.keyring.eddsa')
+    result=$(createLocation ${eddsa} "${cleaner_username}" "${cleaner_name}" ${cleaner_lat} ${cleaner_long} "${cleaner_addr}" ${cleaner_note})
+    loccleaner_id=$(echo ${result} | jq -r '.result.location')
     if [ "${do_debug} " == "true " ]
     then
         echo "DEBUG: $(date) -  result is: ${result}"
         # echo "$(date) - loccleaner_id is ${loccleaner_id}"
     fi
     echo "$(date) - Created location for ${cleaner_name}, id: ${loccleaner_id}"
+
+    exit
 
     result=$(createUnit ${cleaner_seed} "u_piece" "om2:one")
     piece_unit=$(echo ${result} | jq -r '.result.unit')
