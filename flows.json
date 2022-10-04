@@ -142,7 +142,7 @@
         "type": "function",
         "z": "f781100da59ddc5d",
         "name": "Generate Signature",
-        "func": "const zenroom = global.get(\"zenroom\");\n\nconst encoded_variables = JSON.stringify(msg.variables)\n\nconst sign_script = `\nScenario eddsa: sign a graph query\nGiven I have a 'base64' named 'gql'\nGiven I have a 'keyring'\n\n# Fix Apollo's mingling with query string\nWhen I remove spaces in 'gql'\nand I compact ascii strings in 'gql'\n\nWhen I create the eddsa signature of 'gql'\nAnd I create the hash of 'gql'\n\nThen print 'eddsa signature' as 'base64'\nThen print 'gql' as 'base64'\nThen print 'hash' as 'hex'\n`;\n\n\nconst body = `{\"query\":\"${msg.sign.query}\", \"variables\":${encoded_variables}}`\n\nmsg.sign.zenKeys = `\n{\n    \"keyring\":\n    {\n        \"eddsa\": \"${msg.sign.eddsa}\"\n    }\n}`;\n    \nmsg.sign.zenData = `\n{\n    \"gql\": \"${Buffer.from(body, 'utf8').toString('base64')}\",\n}`;\n\n\nzenroom.zencode_exec(sign_script, { data: msg.sign.zenData, keys: msg.sign.zenKeys})\n            .then((result) => {\n                msg.sign.signature = JSON.parse(result.result);\n                console.log(\"Msg signature: \", msg.sign.signature);\n            }).catch((error) => {\n                console.error(\"Error in zenroom sign function: \", error);\n\n            });\n\nreturn msg;",
+        "func": "const zenroom = global.get(\"zenroom\");\n\nconst encoded_variables = JSON.stringify(msg.variables)\n\nconst sign_script = `\nScenario eddsa: sign a graph query\nGiven I have a 'base64' named 'gql'\nGiven I have a 'keyring'\n\n# Fix Apollo's mingling with query string\nWhen I remove spaces in 'gql'\nand I compact ascii strings in 'gql'\n\nWhen I create the eddsa signature of 'gql'\nAnd I create the hash of 'gql'\n\nThen print 'eddsa signature' as 'base64'\nThen print 'gql' as 'base64'\nThen print 'hash' as 'hex'\n`;\n\n\nconst body = `{\"query\":\"${msg.sign.query}\", \"variables\":${encoded_variables}}`\n\nmsg.sign.zenKeys = `\n{\n    \"keyring\":\n    {\n        \"eddsa\": \"${msg.sign.eddsa}\"\n    }\n}`;\n    \nmsg.sign.zenData = `\n{\n    \"gql\": \"${Buffer.from(body, 'utf8').toString('base64')}\",\n}`;\n\nlet res = await zenroom.zencode_exec(sign_script, { data: msg.sign.zenData, keys: msg.sign.zenKeys})\n            .then((result) => {\n                const res = JSON.parse(result.result);\n                console.log(\"Msg signature: \", res);\n                return res;\n            }).catch((error) => {\n                console.error(\"Error in zenroom sign function: \", error);\n                return error;\n\n            });\n\nmsg.sign.signature = res;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -178,7 +178,7 @@
         "type": "debug",
         "z": "a9cf961a3a52160c",
         "name": "",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -186,7 +186,7 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 610,
+        "x": 630,
         "y": 900,
         "wires": []
     },
@@ -254,18 +254,19 @@
         "id": "6b9a303ec68aaf47",
         "type": "function",
         "z": "a9cf961a3a52160c",
-        "name": "Create Unit",
-        "func": "// Reset the headears\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\nmsg.headers['authorization'] = \"Bearer \" + msg.payload.token;\n\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\n\nconst label = msg.payload.label;\nconst symbol = msg.payload.symbol;\n\nconst variables = {\"unit\": {\n                        \"label\": label,\n                        \"symbol\": symbol\n                        }\n            };\n\n// To get this in the debug output\nmsg.variables = variables\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query: `mutation($unit:UnitCreateParams!) {\n            createUnit(unit: $unit) {\n                unit {\n                    id\n                }\n            }\n          }`,\n  variables: variables\n})\n\n\nreturn msg;",
+        "name": "Data to sign",
+        "func": "// Call specific data\nconst label = msg.payload.label;\nconst symbol = msg.payload.symbol;\n\n// Produce the query and variables vars to be signed\nconst variables = {\"unit\": {\n                        \"label\": label,\n                        \"symbol\": symbol\n                        }\n            };\n\n\nconst query = `mutation($unit:UnitCreateParams!) {\n            createUnit(unit: $unit) {\n                unit {\n                    id\n                }\n            }\n          }`;\n\n// Store the variables for later processing\nmsg.variables = variables\n          \n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
         "x": 250,
-        "y": 620,
+        "y": 520,
         "wires": [
             [
-                "41a31f091965c362"
+                "cafeb261165160b1",
+                "9a42dde3957dd0ad"
             ]
         ]
     },
@@ -283,38 +284,11 @@
         "proxy": "",
         "authType": "",
         "senderr": false,
-        "x": 450,
-        "y": 620,
+        "x": 630,
+        "y": 520,
         "wires": [
             [
-                "8aafa40d09d8bbe7"
-            ]
-        ]
-    },
-    {
-        "id": "8aafa40d09d8bbe7",
-        "type": "change",
-        "z": "a9cf961a3a52160c",
-        "name": "Set Unit",
-        "rules": [
-            {
-                "t": "set",
-                "p": "unit",
-                "pt": "flow",
-                "to": "payload.data.createUnit.unit.id",
-                "tot": "msg",
-                "dc": true
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
-        "x": 620,
-        "y": 620,
-        "wires": [
-            [
+                "9a42dde3957dd0ad",
                 "7e3394bb6ca1da06"
             ]
         ]
@@ -382,13 +356,13 @@
         "id": "9927f0b45d15344b",
         "type": "http in",
         "z": "a9cf961a3a52160c",
-        "name": "Form",
-        "url": "/isolationgowns/unit",
+        "name": "createUnit",
+        "url": "/interfacer/createUnit",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 90,
-        "y": 620,
+        "x": 100,
+        "y": 520,
         "wires": [
             [
                 "6b9a303ec68aaf47"
@@ -407,7 +381,7 @@
         "finalize": "",
         "libs": [],
         "x": 820,
-        "y": 620,
+        "y": 520,
         "wires": [
             [
                 "71f92c67ca67af48"
@@ -421,8 +395,8 @@
         "name": "",
         "statusCode": "",
         "headers": {},
-        "x": 970,
-        "y": 620,
+        "x": 990,
+        "y": 520,
         "wires": []
     },
     {
@@ -432,7 +406,7 @@
         "name": "",
         "statusCode": "",
         "headers": {},
-        "x": 930,
+        "x": 990,
         "y": 840,
         "wires": []
     },
@@ -447,7 +421,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 820,
         "y": 840,
         "wires": [
             [
@@ -469,7 +443,7 @@
         "proxy": "",
         "authType": "",
         "senderr": false,
-        "x": 450,
+        "x": 650,
         "y": 840,
         "wires": [
             [
@@ -482,19 +456,19 @@
         "id": "62fcaf5db019d842",
         "type": "function",
         "z": "a9cf961a3a52160c",
-        "name": "Create Resource",
-        "func": "// Reset the headears\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\nmsg.headers['authorization'] = \"Bearer \" + msg.payload.token;\n\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\n\nconst agent_id = msg.payload.agent_id;\nconst resource_id = msg.payload.resource_id;\nconst resource_name = msg.payload.resource_name;\nconst unit_id = msg.payload.unit_id;\nconst amount = msg.payload.amount;\nconst classification = msg.payload.classification;\n\nconst ts = new Date(Date.now());\n\nconst variables = {\n        \"event\": {\n            \"note\": \"update event\",\n            \"action\": \"raise\",\n            \"provider\": agent_id, \n            \"receiver\": agent_id,\n            \"hasPointInTime\" : ts,\n            \"resourceQuantity\": {\n              \"hasUnit\": unit_id, \n              \"hasNumericalValue\": amount \n            },\n            \"resourceConformsTo\": classification\n        },\n        \"newInventoriedResource\": { \n            \"name\": resource_name,\n            \"trackingIdentifier\": resource_id\n        }\n};\n\n// To get this in the debug output\nmsg.variables = variables\n\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query:    `mutation($event:EconomicEventCreateParams!, $newInventoriedResource:EconomicResourceCreateParams) {\n                createEconomicEvent(event:$event, newInventoriedResource:$newInventoriedResource) {\n                    economicEvent {\n                        id\n                        provider {\n                            id\n                            name\n                            note\n                        }\n                        resourceQuantity {\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n                        }\n                    }\n    \t\t\t\teconomicResource{\n                      id\n                      accountingQuantity {\n                        hasNumericalValue\n                      }\n                      onhandQuantity {\n                        hasNumericalValue\n                      }\n                      conformsTo {\n                        id\n                      }\n                      \n                    }\n                }\n            }`,\n    variables: variables\n})\n\n\nreturn msg;",
+        "name": "Data to sign",
+        "func": "// Call specific data\nconst agent_id = msg.payload.agent_id;\nconst resource_id = msg.payload.resource_id;\nconst resource_name = msg.payload.resource_name;\nconst unit_id = msg.payload.unit_id;\nconst amount = msg.payload.amount;\nconst classification = msg.payload.classification;\n\n// Produce the query and variables vars to be signed\nconst ts = new Date(Date.now());\n\nconst variables = {\n        \"event\": {\n            \"note\": \"update event\",\n            \"action\": \"raise\",\n            \"provider\": agent_id, \n            \"receiver\": agent_id,\n            \"hasPointInTime\" : ts,\n            \"resourceQuantity\": {\n              \"hasUnit\": unit_id, \n              \"hasNumericalValue\": amount \n            },\n            \"resourceConformsTo\": classification\n        },\n        \"newInventoriedResource\": { \n            \"name\": resource_name,\n            \"trackingIdentifier\": resource_id\n        }\n};\n\nconst query = `mutation($event:EconomicEventCreateParams!, $newInventoriedResource:EconomicResourceCreateParams) {\n                createEconomicEvent(event:$event, newInventoriedResource:$newInventoriedResource) {\n                    economicEvent {\n                        id\n                        provider {\n                            id\n                            name\n                            note\n                        }\n                        resourceQuantity {\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n                        }\n                    }\n                }\n            }`;\n\n// Store the variables for later processing\nmsg.variables = variables\n          \n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 270,
+        "x": 310,
         "y": 840,
         "wires": [
             [
-                "75ad1ae27b0775fb",
-                "b582df30a9d2445c"
+                "b582df30a9d2445c",
+                "d4a01c7ff1aa60f2"
             ]
         ]
     },
@@ -502,12 +476,12 @@
         "id": "13197e6bea34f939",
         "type": "http in",
         "z": "a9cf961a3a52160c",
-        "name": "Form",
-        "url": "/isolationgowns/resource",
+        "name": "createResource",
+        "url": "/interfacer/createResource",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 90,
+        "x": 120,
         "y": 840,
         "wires": [
             [
@@ -589,12 +563,12 @@
         "id": "b82c72a08c1a9fde",
         "type": "http in",
         "z": "a9cf961a3a52160c",
-        "name": "Form",
-        "url": "/isolationgowns/process",
+        "name": "createProcess",
+        "url": "/interfacer/createProcess",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 90,
+        "x": 110,
         "y": 980,
         "wires": [
             [
@@ -676,12 +650,12 @@
         "id": "26c12da433641d7d",
         "type": "http in",
         "z": "a9cf961a3a52160c",
-        "name": "Form",
-        "url": "/isolationgowns/transfer",
+        "name": "createTransfer",
+        "url": "/interfacer/createTransfer",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 90,
+        "x": 110,
         "y": 1120,
         "wires": [
             [
@@ -803,12 +777,12 @@
         "id": "1b77e1551252bd55",
         "type": "http in",
         "z": "a9cf961a3a52160c",
-        "name": "Form",
-        "url": "/isolationgowns/event",
+        "name": "createEvent",
+        "url": "/interfacer/createEvent",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 90,
+        "x": 110,
         "y": 1240,
         "wires": [
             [
@@ -910,12 +884,12 @@
         "id": "dc031adaa1b0f61b",
         "type": "http in",
         "z": "a9cf961a3a52160c",
-        "name": "Form",
-        "url": "/isolationgowns/tracetrack",
+        "name": "traceTrack",
+        "url": "/interfacer/traceTrack",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 90,
+        "x": 100,
         "y": 1360,
         "wires": [
             [
@@ -930,7 +904,7 @@
         "name": "Create units of measurements for resources",
         "info": "",
         "x": 210,
-        "y": 580,
+        "y": 480,
         "wires": []
     },
     {
@@ -1004,7 +978,7 @@
         "proxy": "",
         "authType": "",
         "senderr": false,
-        "x": 450,
+        "x": 650,
         "y": 720,
         "wires": [
             [
@@ -1017,19 +991,19 @@
         "id": "a9dec105802ab695",
         "type": "function",
         "z": "a9cf961a3a52160c",
-        "name": "Create Spec",
-        "func": "// Reset the headears\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\nmsg.headers['authorization'] = \"Bearer \" + msg.payload.token;\n\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\n\nconst unit_id = msg.payload.unit_id;\nconst name = msg.payload.name;\nconst note = msg.payload.note;\nconst classification = msg.payload.classification;\n\nconst ts = new Date(Date.now());\n\nconst variables = {\n        \"resourceSpecification\": {\n            \"defaultUnitOfResource\": unit_id,\n            \"name\": name,\n            \"note\": note,\n            \"resourceClassifiedAs\": classification\n\t    }\n    };\n\n// To get this in the debug output\nmsg.variables = variables\n\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query:    `mutation ($resourceSpecification:ResourceSpecificationCreateParams!){\n  \t            createResourceSpecification(resourceSpecification:$resourceSpecification){\n                    resourceSpecification{\n                        id,\n                        name\n                    }\n                }\n            }`,\n    variables: variables\n})\n\n\nreturn msg;",
+        "name": "Data to sign",
+        "func": "// Call specific data\nconst unit_id = msg.payload.unit_id;\nconst name = msg.payload.name;\nconst note = msg.payload.note;\nconst classification = msg.payload.classification;\n\n// Produce the query and variables vars to be signed\nconst ts = new Date(Date.now());\n\nconst variables = {\n        \"resourceSpecification\": {\n            \"defaultUnitOfResource\": unit_id,\n            \"name\": name,\n            \"note\": note,\n            \"resourceClassifiedAs\": classification\n\t    }\n    };\n\n\nconst query = `mutation ($resourceSpecification:ResourceSpecificationCreateParams!){\n  \t            createResourceSpecification(resourceSpecification:$resourceSpecification){\n                    resourceSpecification{\n                        id,\n                        name\n                    }\n                }\n            }`;\n\n// Store the variables for later processing\nmsg.variables = variables\n          \n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 250,
+        "x": 330,
         "y": 720,
         "wires": [
             [
-                "383d01758c0eab1c",
-                "21e3ef708e289378"
+                "21e3ef708e289378",
+                "1953a01fc897eb9c"
             ]
         ]
     },
@@ -1044,7 +1018,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 820,
         "y": 720,
         "wires": [
             [
@@ -1056,12 +1030,12 @@
         "id": "525b857facb27517",
         "type": "http in",
         "z": "a9cf961a3a52160c",
-        "name": "Form",
-        "url": "/isolationgowns/resourcespec",
+        "name": "createResourceSpec",
+        "url": "/interfacer/createResourceSpec",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 90,
+        "x": 140,
         "y": 720,
         "wires": [
             [
@@ -1076,7 +1050,7 @@
         "name": "",
         "statusCode": "",
         "headers": {},
-        "x": 930,
+        "x": 990,
         "y": 720,
         "wires": []
     },
@@ -1087,7 +1061,7 @@
         "name": "Create resources specification",
         "info": "",
         "x": 160,
-        "y": 680,
+        "y": 660,
         "wires": []
     },
     {
@@ -1171,7 +1145,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 260,
+        "x": 280,
         "y": 240,
         "wires": [
             [
@@ -1194,19 +1168,19 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 590,
-        "y": 280,
+        "y": 300,
         "wires": []
     },
     {
         "id": "2bf52a3634071bdb",
         "type": "http in",
         "z": "a9cf961a3a52160c",
-        "name": "Form",
+        "name": "createPerson",
         "url": "/interfacer/createPerson",
         "method": "post",
         "upload": false,
         "swaggerDoc": "",
-        "x": 90,
+        "x": 110,
         "y": 240,
         "wires": [
             [
@@ -1282,7 +1256,7 @@
         "type": "function",
         "z": "a9cf961a3a52160c",
         "name": "Data to sign",
-        "func": "\nconst name = msg.payload.name;\nconst lat = msg.payload.lat;\nconst long = msg.payload.long;\nconst addr = msg.payload.addr;\nconst note = msg.payload.note;\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nconst variables = {\n        \"location\": {\n            \"name\": name,\n            \"alt\": 0,\n            \"lat\": lat,\n            \"long\": long,\n            \"mappableAddress\": addr,\n            \"note\": note\n        }\n    };\n\nconst query = `mutation($location: SpatialThingCreateParams!) {\n            createSpatialThing(spatialThing: $location) {\n                spatialThing {\n                    id\n                }\n            }\n        }`;\n    \n// To get this in the debug output\nmsg.variables = variables\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\nreturn msg;",
+        "func": "// Call specific data\nconst name = msg.payload.name;\nconst lat = msg.payload.lat;\nconst long = msg.payload.long;\nconst addr = msg.payload.addr;\nconst note = msg.payload.note;\n\n// Produce the query and variables vars to be signed\nconst variables = {\n        \"location\": {\n            \"name\": name,\n            \"alt\": 0,\n            \"lat\": lat,\n            \"long\": long,\n            \"mappableAddress\": addr,\n            \"note\": note\n        }\n    };\n\nconst query = `mutation($location: SpatialThingCreateParams!) {\n            createSpatialThing(spatialThing: $location) {\n                spatialThing {\n                    id\n                }\n            }\n        }`;\n    \n// Store the variables for later processing\nmsg.variables = variables\n\n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -1292,7 +1266,8 @@
         "y": 360,
         "wires": [
             [
-                "9ef6d03550d0dddf"
+                "9ef6d03550d0dddf",
+                "08da7da1110298ac"
             ]
         ]
     },
@@ -1301,7 +1276,7 @@
         "type": "debug",
         "z": "a9cf961a3a52160c",
         "name": "",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -1351,6 +1326,64 @@
             [
                 "316ee28d745a44e4",
                 "08da7da1110298ac"
+            ]
+        ]
+    },
+    {
+        "id": "cafeb261165160b1",
+        "type": "subflow:f781100da59ddc5d",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "x": 450,
+        "y": 520,
+        "wires": [
+            [
+                "41a31f091965c362",
+                "9a42dde3957dd0ad"
+            ]
+        ]
+    },
+    {
+        "id": "9a42dde3957dd0ad",
+        "type": "debug",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 610,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "1953a01fc897eb9c",
+        "type": "subflow:f781100da59ddc5d",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "x": 490,
+        "y": 720,
+        "wires": [
+            [
+                "383d01758c0eab1c",
+                "21e3ef708e289378"
+            ]
+        ]
+    },
+    {
+        "id": "d4a01c7ff1aa60f2",
+        "type": "subflow:f781100da59ddc5d",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "x": 490,
+        "y": 840,
+        "wires": [
+            [
+                "75ad1ae27b0775fb"
             ]
         ]
     }

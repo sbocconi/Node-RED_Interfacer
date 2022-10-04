@@ -108,45 +108,49 @@ function createPerson {
 }
 
 function createLocation {
-    body="{\"eddsa\" : \"${1}\", \"username\" : \"${2}\", \"name\" : \"${3}\", \"lat\" : ${4}, \"long\" : ${5}, \"addr\" : \"${6}\", \"note\" : \"${7}\", \"endpoint\" : \"${my_endpoint}\" }"
+    sign_body="\"eddsa\" : \"${1}\", \"username\" : \"${2}\""
+    body="{${sign_body}, \"name\" : \"${3}\", \"lat\" : ${4}, \"long\" : ${5}, \"addr\" : \"${6}\", \"note\" : \"${7}\", \"endpoint\" : \"${my_endpoint}\" }"
     result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createLocation 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
 
 function createUnit {
-    body="{\"eddsa\" : \"${1}\", \"label\" : \"${2}\", \"symbol\" : \"${3}\", \"endpoint\" : \"${my_endpoint}\" }"
-    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/unit 2>/dev/null)
+    sign_body="\"eddsa\" : \"${1}\", \"username\" : \"${2}\""
+    body="{${sign_body}, \"label\" : \"${3}\", \"symbol\" : \"${4}\", \"endpoint\" : \"${my_endpoint}\" }"
+    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createUnit 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
 
 function createProcess {
-    body="{\"eddsa\" : \"${1}\", \"process_name\" : \"${2}\", \"process_note\" : \"${3}\", \"endpoint\" : \"${my_endpoint}\" }"
-    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/process 2>/dev/null)
+    sign_body="\"eddsa\" : \"${1}\", \"username\" : \"${2}\""
+    body="{${sign_body}, \"process_name\" : \"${3}\", \"process_note\" : \"${4}\", \"endpoint\" : \"${my_endpoint}\" }"
+    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createProcess 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
 
 function transferCustody {
-
-    body="{\"eddsa\" : \"${1}\", \"provider_id\" : \"${2}\", \"receiver_id\" : \"${3}\", \"resource_id\" : \"${4}\", \"unit_id\" : \"${5}\", \"amount\" : ${6}, \"location_id\" : \"${7}\", \"note\": \"${8}\", \"endpoint\" : \"${my_endpoint}\" }"
-    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/transfer 2>/dev/null)
+    sign_body="\"eddsa\" : \"${1}\", \"username\" : \"${2}\""
+    body="{${sign_body}, \"provider_id\" : \"${3}\", \"receiver_id\" : \"${4}\", \"resource_id\" : \"${5}\", \"unit_id\" : \"${6}\", \"amount\" : ${7}, \"location_id\" : \"${8}\", \"note\": \"${9}\", \"endpoint\" : \"${my_endpoint}\" }"
+    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createTransfer 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
 
 function createResourceSpec {
-
-    body="{\"eddsa\" : \"${1}\", \"unit_id\" : \"${2}\", \"name\" : \"${3}\", \"note\" : \"${4}\", \"classification\" : \"${5}\", \"endpoint\" : \"${my_endpoint}\" }"
-    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/resourcespec 2>/dev/null)
+    sign_body="\"eddsa\" : \"${1}\", \"username\" : \"${2}\""
+    body="{${sign_body}, \"unit_id\" : \"${3}\", \"name\" : \"${4}\", \"note\" : \"${5}\", \"classification\" : \"${6}\", \"endpoint\" : \"${my_endpoint}\" }"
+    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createResourceSpec 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
 
 function createResource {
-    body="{\"eddsa\" : \"${1}\", \"agent_id\" : \"${2}\", \"resource_name\" : \"${3}\", \"resource_id\" : \"${4}\", \"unit_id\" : \"${5}\", \"amount\" : ${6}, \"classification\": \"${7}\", \"endpoint\" : \"${my_endpoint}\" }"
-    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/resource 2>/dev/null)
+    sign_body="\"eddsa\" : \"${1}\", \"username\" : \"${2}\""
+    body="{${sign_body}, \"agent_id\" : \"${3}\", \"resource_name\" : \"${4}\", \"resource_id\" : \"${5}\", \"unit_id\" : \"${6}\", \"amount\" : ${7}, \"classification\": \"${8}\", \"endpoint\" : \"${my_endpoint}\" }"
+    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createResource 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
@@ -158,26 +162,26 @@ function createEvent {
 
     case "${action}" in
         "work")
-            body="{ ${common_body}, \"processIn_id\" : \"${8}\", \"classification\": \"${9}\"}"
+            body="{${common_body}, \"processIn_id\" : \"${8}\", \"classification\": \"${9}\"}"
         ;;
         "accept")
-            body="{ ${common_body}, \"processIn_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
+            body="{${common_body}, \"processIn_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
         ;;
         "modify")
-            body="{ ${common_body}, \"processOut_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
+            body="{${common_body}, \"processOut_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
         ;;
         "consume")
-            body="{ ${common_body}, \"processIn_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
+            body="{${common_body}, \"processIn_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
         ;;
         "produce")
-            body="{ ${common_body}, \"processOut_id\" : \"${8}\", \"resourcetrack_id\" : \"${9}\", \"resource_name\" : \"${10}\", \"classification\": \"${11}\"}"
+            body="{${common_body}, \"processOut_id\" : \"${8}\", \"resourcetrack_id\" : \"${9}\", \"resource_name\" : \"${10}\", \"classification\": \"${11}\"}"
         ;;
         *)
             echo "Please specify a valid action"
         ;;
 	esac
 
-    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/event 2>/dev/null)
+    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createEvent 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
@@ -185,7 +189,7 @@ function createEvent {
 function traceTrack {
 
     body="{\"resource_id\" : \"${1}\", \"recursion\" : ${2}, \"endpoint\" : \"${my_endpoint}\" }"
-    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/tracetrack 2>/dev/null)
+    result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/traceTrack 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
 }
@@ -315,8 +319,8 @@ then
     ################################################################################
     ##### Create locations and units of measures
     ################################################################################
-    eddsa=$(cat ${hosp_cred_file} | jq -r '.keyring.eddsa')
-    result=$(createLocation ${eddsa} "${hospital_username}" "${hospital_name}" ${hospital_lat} ${hospital_long} "${hospital_addr}" ${hospital_note})
+    eddsa_hosp=$(cat ${hosp_cred_file} | jq -r '.keyring.eddsa')
+    result=$(createLocation ${eddsa_hosp} "${hospital_username}" "${hospital_name}" ${hospital_lat} ${hospital_long} "${hospital_addr}" ${hospital_note})
     lochospital_id=$(echo ${result} | jq -r '.result.location')
     if [ "${do_debug} " == "true " ]
     then
@@ -325,8 +329,8 @@ then
     fi
     echo "$(date) - Created location for ${hospital_name}, id: ${lochospital_id}"
     
-    eddsa=$(cat ${cleaner_cred_file} | jq -r '.keyring.eddsa')
-    result=$(createLocation ${eddsa} "${cleaner_username}" "${cleaner_name}" ${cleaner_lat} ${cleaner_long} "${cleaner_addr}" ${cleaner_note})
+    eddsa_cleaner=$(cat ${cleaner_cred_file} | jq -r '.keyring.eddsa')
+    result=$(createLocation ${eddsa_cleaner} "${cleaner_username}" "${cleaner_name}" ${cleaner_lat} ${cleaner_long} "${cleaner_addr}" ${cleaner_note})
     loccleaner_id=$(echo ${result} | jq -r '.result.location')
     if [ "${do_debug} " == "true " ]
     then
@@ -335,9 +339,7 @@ then
     fi
     echo "$(date) - Created location for ${cleaner_name}, id: ${loccleaner_id}"
 
-    exit
-
-    result=$(createUnit ${cleaner_seed} "u_piece" "om2:one")
+    result=$(createUnit ${eddsa_cleaner} "${cleaner_username}" "u_piece" "om2:one")
     piece_unit=$(echo ${result} | jq -r '.result.unit')
     if [ "${do_debug} " == "true " ]
     then
@@ -346,7 +348,7 @@ then
     fi
     echo "$(date) - Created unit for gowns, id: ${piece_unit}"
 
-    result=$(createUnit ${cleaner_seed} "kg" "om2:kilogram")
+    result=$(createUnit ${eddsa_cleaner} "${cleaner_username}" "kg" "om2:kilogram")
     mass_unit=$(echo ${result} | jq -r '.result.unit')
     if [ "${do_debug} " == "true " ]
     then
@@ -355,7 +357,7 @@ then
     fi
     echo "$(date) - Created unit for mass (kg), id: ${mass_unit}"
 
-    result=$(createUnit ${cleaner_seed} "lt" "om2:litre")
+    result=$(createUnit ${eddsa_cleaner} "${cleaner_username}" "lt" "om2:litre")
     volume_unit=$(echo ${result} | jq -r '.result.unit')
     if [ "${do_debug} " == "true " ]
     then
@@ -364,7 +366,7 @@ then
     fi
     echo "$(date) - Created unit for volume (litre), id: ${volume_unit}"
     
-    result=$(createUnit ${hospital_seed} "h" "om2:hour")
+    result=$(createUnit ${eddsa_hosp} "${hospital_username}" "h" "om2:hour")
     time_unit=$(echo ${result} | jq -r '.result.unit')
     if [ "${do_debug} " == "true " ]
     then
@@ -374,7 +376,7 @@ then
     echo "$(date) - Create unit for time (hour), id: ${time_unit}"
 
     # Save units to file
-    jq -n "{lochospital_id: ${lochospital_id},  loccleaner_id: ${loccleaner_id}, piece_unit: ${piece_unit}, mass_unit: ${mass_unit}, volume_unit: ${volume_unit}, time_unit: ${time_unit}}" > ${init_file}
+    jq -n "{lochospital_id: \"${lochospital_id}\",  loccleaner_id: \"${loccleaner_id}\", piece_unit: \"${piece_unit}\", mass_unit: \"${mass_unit}\", volume_unit: \"${volume_unit}\", time_unit: \"${time_unit}\"}" > ${init_file}
 else
     echo "$(date) - Reading units from file ${init_file}"
     lochospital_id=$(cat ${init_file} | jq -r '.lochospital_id')
@@ -396,8 +398,6 @@ else
 
 fi
 
-exit
-
 ################################################################################
 ##### Create Resources (the owner is the cleaner for them all):
 ##### -gown (https://www.wikidata.org/wiki/Q89990310)
@@ -405,8 +405,9 @@ exit
 ##### -water to wash the gown (https://www.wikidata.org/wiki/Q283)
 ##### -cotton to sew the gown (https://www.wikidata.org/wiki/Q11457)
 ################################################################################
+eddsa_cleaner=$(cat ${cleaner_cred_file} | jq -r '.keyring.eddsa')
 note='Specification for soap to be used to wash the gowns'
-result=$(createResourceSpec ${cleaner_seed} "${mass_unit}" "Soap" "${note}" "https://www.wikidata.org/wiki/Q34396")
+result=$(createResourceSpec ${eddsa_cleaner} "${cleaner_username}" "${mass_unit}" "Soap" "${note}" "https://www.wikidata.org/wiki/Q34396")
 soap_spec_id=$(echo ${result} | jq -r '.result.specId')
 if [ "${do_debug} " == "true " ]
 then
@@ -415,7 +416,7 @@ fi
 echo "$(date) - Created ${note} with spec id: ${soap_spec_id}"
 
 soap_trackid="soap-${RANDOM}"
-result=$(createResource ${cleaner_seed} "${cleaner_id}" "Soap" ${soap_trackid} "${mass_unit}" 100 ${soap_spec_id})
+result=$(createResource ${eddsa_cleaner} "${cleaner_username}" "${cleaner_id}" "Soap" ${soap_trackid} "${mass_unit}" 100 ${soap_spec_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 soap_id=$(echo ${result} | jq -r '.result.resourceId')
 if [ "${do_debug} " == "true " ]
@@ -423,6 +424,7 @@ then
     echo "DEBUG: $(date) -  result is: ${result}"
 fi
 echo "$(date) - Created 100 kg soap with tracking id: ${soap_trackid}, id: ${soap_id} owned by the cleaner, event id: ${event_id}"
+exit
 
 note='Specification for water to be used to wash the gowns'
 result=$(createResourceSpec ${cleaner_seed} "${volume_unit}" "Water" "${note}" "https://www.wikidata.org/wiki/Q283")
