@@ -142,7 +142,7 @@
         "type": "function",
         "z": "f781100da59ddc5d",
         "name": "Generate Signature",
-        "func": "const zenroom = global.get(\"zenroom\");\n\nconst encoded_variables = JSON.stringify(msg.variables)\n\nconst sign_script = `\nScenario eddsa: sign a graph query\nGiven I have a 'base64' named 'gql'\nGiven I have a 'keyring'\n\n# Fix Apollo's mingling with query string\nWhen I remove spaces in 'gql'\nand I compact ascii strings in 'gql'\n\nWhen I create the eddsa signature of 'gql'\nAnd I create the hash of 'gql'\n\nThen print 'eddsa signature' as 'base64'\nThen print 'gql' as 'base64'\nThen print 'hash' as 'hex'\n`;\n\n\nconst body = `{\"query\":\"${msg.sign.query}\", \"variables\":${encoded_variables}}`\n\nmsg.sign.zenKeys = `\n{\n    \"keyring\":\n    {\n        \"eddsa\": \"${msg.sign.eddsa}\"\n    }\n}`;\n    \nmsg.sign.zenData = `\n{\n    \"gql\": \"${Buffer.from(body, 'utf8').toString('base64')}\",\n}`;\n\nlet res = await zenroom.zencode_exec(sign_script, { data: msg.sign.zenData, keys: msg.sign.zenKeys})\n            .then((result) => {\n                const res = JSON.parse(result.result);\n                console.log(\"Msg signature: \", res);\n                return res;\n            }).catch((error) => {\n                console.error(\"Error in zenroom sign function: \", error);\n                return error;\n\n            });\n\nmsg.sign.signature = res;\nreturn msg;",
+        "func": "const zenroom = global.get(\"zenroom\");\n\nconst encoded_variables = JSON.stringify(msg.variables)\n\nconst sign_script = `\nScenario eddsa: sign a graph query\nGiven I have a 'base64' named 'gql'\nGiven I have a 'keyring'\n\n# Fix Apollo's mingling with query string\nWhen I remove spaces in 'gql'\nand I compact ascii strings in 'gql'\n\nWhen I create the eddsa signature of 'gql'\nAnd I create the hash of 'gql'\n\nThen print 'eddsa signature' as 'base64'\nThen print 'gql' as 'base64'\nThen print 'hash' as 'hex'\n`;\n\n\nconst body = `{\"query\":\"${msg.sign.query}\", \"variables\":${encoded_variables}}`\n\nmsg.sign.zenKeys = `\n{\n    \"keyring\":\n    {\n        \"eddsa\": \"${msg.sign.eddsa}\"\n    }\n}`;\n    \nmsg.sign.zenData = `\n{\n    \"gql\": \"${Buffer.from(body, 'utf8').toString('base64')}\",\n}`;\n\nlet res = await zenroom.zencode_exec(sign_script, { data: msg.sign.zenData, keys: msg.sign.zenKeys})\n            .then((result) => {\n                console.log(\"Msg : \", result.result);\n                const res = JSON.parse(result.result);\n                console.log(\"Msg signature: \", res);\n                return res;\n            }).catch((error) => {\n                console.error(\"Error in zenroom sign function: \", error);\n                return error;\n\n            });\n\nmsg.sign.signature = res;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -178,7 +178,7 @@
         "type": "debug",
         "z": "a9cf961a3a52160c",
         "name": "",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -297,18 +297,19 @@
         "id": "e7f96084acdd0aa2",
         "type": "function",
         "z": "a9cf961a3a52160c",
-        "name": "Create Process",
-        "func": "// Reset the headears\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\nmsg.headers['authorization'] = \"Bearer \" + msg.payload.token;\n\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\n\nconst name = msg.payload.process_name;\nconst note = msg.payload.process_note;\n\nconst ts = new Date(Date.now());\n\nconst variables = {\n      \"process\": {\n        \"name\": name,\n        \"note\": note,\n        \"hasBeginning\": ts,\n        \"hasEnd\": ts\n      }\n  };\n\n// To get this in the debug output\nmsg.variables = variables\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query: `mutation($process:ProcessCreateParams!) {\n\t  createProcess(process: $process) {\n\t\tprocess {\n\t\t  id\n\t\t}\n\t  }\n\t}\n`,\n  variables: variables\n})\n\nreturn msg;",
+        "name": "Data to sign",
+        "func": "// Call specific data\nconst name = msg.payload.process_name;\nconst note = msg.payload.process_note;\n\n// Produce the query and variables vars to be signed\nconst ts = new Date(Date.now());\n\nconst variables = {\n      \"process\": {\n        \"name\": name,\n        \"note\": note,\n        \"hasBeginning\": ts,\n        \"hasEnd\": ts\n      }\n  };\n\nconst query = `mutation($process:ProcessCreateParams!) {\n\t  createProcess(process: $process) {\n\t\tprocess {\n\t\t  id\n\t\t}\n\t  }\n\t}`;\n\t\n\n// Store the variables for later processing\nmsg.variables = variables\n          \n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 260,
+        "x": 270,
         "y": 980,
         "wires": [
             [
-                "cf36936a5c75bfd6"
+                "b1dddf12ee1a9e24",
+                "6905f51ee38526b3"
             ]
         ]
     },
@@ -415,7 +416,7 @@
         "type": "function",
         "z": "a9cf961a3a52160c",
         "name": "Format Reply",
-        "func": "const eventId = msg.payload.data.createEconomicEvent.economicEvent.id;\nconst resourceId = msg.payload.data.createEconomicEvent.economicResource.id;\n\n\nmsg.payload = {};\nmsg.payload.eventId = eventId;\nmsg.payload.resourceId = resourceId;\n\nreturn msg;",
+        "func": "const eventId = msg.payload.data.createEconomicEvent.economicEvent.id;\nconst resourceId = msg.payload.data.createEconomicEvent.economicEvent.resourceInventoriedAs.id;\n\n\nmsg.payload = {};\nmsg.payload.eventId = eventId;\nmsg.payload.resourceId = resourceId;\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -457,7 +458,7 @@
         "type": "function",
         "z": "a9cf961a3a52160c",
         "name": "Data to sign",
-        "func": "// Call specific data\nconst agent_id = msg.payload.agent_id;\nconst resource_id = msg.payload.resource_id;\nconst resource_name = msg.payload.resource_name;\nconst unit_id = msg.payload.unit_id;\nconst amount = msg.payload.amount;\nconst classification = msg.payload.classification;\n\n// Produce the query and variables vars to be signed\nconst ts = new Date(Date.now());\n\nconst variables = {\n        \"event\": {\n            \"note\": \"update event\",\n            \"action\": \"raise\",\n            \"provider\": agent_id, \n            \"receiver\": agent_id,\n            \"hasPointInTime\" : ts,\n            \"resourceQuantity\": {\n              \"hasUnit\": unit_id, \n              \"hasNumericalValue\": amount \n            },\n            \"resourceConformsTo\": classification\n        },\n        \"newInventoriedResource\": { \n            \"name\": resource_name,\n            \"trackingIdentifier\": resource_id\n        }\n};\n\nconst query = `mutation($event:EconomicEventCreateParams!, $newInventoriedResource:EconomicResourceCreateParams) {\n                createEconomicEvent(event:$event, newInventoriedResource:$newInventoriedResource) {\n                    economicEvent {\n                        id\n                        provider {\n                            id\n                            name\n                            note\n                        }\n                        resourceQuantity {\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n                        }\n                    }\n                }\n            }`;\n\n// Store the variables for later processing\nmsg.variables = variables\n          \n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\n\nreturn msg;",
+        "func": "// Call specific data\nconst agent_id = msg.payload.agent_id;\nconst resource_id = msg.payload.resource_id;\nconst resource_name = msg.payload.resource_name;\nconst unit_id = msg.payload.unit_id;\nconst amount = msg.payload.amount;\nconst classification = msg.payload.classification;\n\n// Produce the query and variables vars to be signed\nconst ts = new Date(Date.now());\n\nconst variables = {\n        \"event\": {\n            \"note\": \"update event\",\n            \"action\": \"raise\",\n            \"provider\": agent_id, \n            \"receiver\": agent_id,\n            \"hasPointInTime\" : ts,\n            \"resourceQuantity\": {\n              \"hasUnit\": unit_id, \n              \"hasNumericalValue\": amount \n            },\n            \"resourceConformsTo\": classification\n        },\n        \"newInventoriedResource\": { \n            \"name\": resource_name,\n            \"trackingIdentifier\": resource_id\n        }\n};\n\nconst query = `mutation($event:EconomicEventCreateParams!, $newInventoriedResource:EconomicResourceCreateParams) {\n                createEconomicEvent(event:$event, newInventoriedResource:$newInventoriedResource) {\n                    economicEvent {\n                        id\n                        provider {\n                            id\n                            name\n                            note\n                        }\n                        resourceQuantity {\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n                        }\n                        resourceInventoriedAs {\n                            id\n                            trackingIdentifier  \n                      }\n                    }\n                }\n            }`;\n\n// Store the variables for later processing\nmsg.variables = variables\n          \n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -500,7 +501,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 820,
         "y": 980,
         "wires": [
             [
@@ -522,7 +523,7 @@
         "proxy": "",
         "authType": "",
         "senderr": false,
-        "x": 450,
+        "x": 630,
         "y": 980,
         "wires": [
             [
@@ -538,7 +539,7 @@
         "name": "",
         "statusCode": "",
         "headers": {},
-        "x": 930,
+        "x": 990,
         "y": 980,
         "wires": []
     },
@@ -583,8 +584,8 @@
         "name": "",
         "statusCode": "",
         "headers": {},
-        "x": 930,
-        "y": 1120,
+        "x": 990,
+        "y": 1400,
         "wires": []
     },
     {
@@ -592,14 +593,14 @@
         "type": "function",
         "z": "a9cf961a3a52160c",
         "name": "Format Reply",
-        "func": "const eventID = msg.payload.data.createEconomicEvent.economicEvent.id;\n\nconst transferredID = msg.payload.data.createEconomicEvent.economicEvent.toResourceInventoriedAs.id;\n\n\nmsg.payload = {};\nmsg.payload.eventId = eventID;\nmsg.payload.transferredID = transferredID;\n\nreturn msg;",
+        "func": "const eventId = msg.payload.data.createEconomicEvent.economicEvent.id;\n\nconst transferredId = msg.payload.data.createEconomicEvent.economicEvent.toResourceInventoriedAs.id;\n\n\nmsg.payload = {};\nmsg.payload.eventId = eventId;\nmsg.payload.transferredId = transferredId;\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
-        "y": 1120,
+        "x": 820,
+        "y": 1400,
         "wires": [
             [
                 "71e1a605b5ded04e"
@@ -620,8 +621,8 @@
         "proxy": "",
         "authType": "",
         "senderr": false,
-        "x": 450,
-        "y": 1120,
+        "x": 630,
+        "y": 1400,
         "wires": [
             [
                 "78bbd41a6c118d6b",
@@ -643,7 +644,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 610,
-        "y": 1180,
+        "y": 1460,
         "wires": []
     },
     {
@@ -656,7 +657,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 110,
-        "y": 1120,
+        "y": 1400,
         "wires": [
             [
                 "e6a4ec239be873e1"
@@ -667,19 +668,19 @@
         "id": "e6a4ec239be873e1",
         "type": "function",
         "z": "a9cf961a3a52160c",
-        "name": "Transfer Custody",
-        "func": "// Reset the headears\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\nmsg.headers['authorization'] = \"Bearer \" + msg.payload.token;\n\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\n\nconst note = msg.payload.note;\nconst provider_id = msg.payload.provider_id;\nconst receiver_id = msg.payload.receiver_id;\nconst resource_id = msg.payload.resource_id;\nconst unit_id = msg.payload.unit_id;\nconst amount = msg.payload.amount;\nconst location_id = msg.payload.location_id;\n\nconst ts = new Date(Date.now());\nconst variables = {\n        \"event\": {\n            \"note\": note,\n            \"action\": \"transfer-custody\",\n            \"provider\": provider_id, \n            \"receiver\": receiver_id, \n            \"resourceInventoriedAs\": resource_id,\n            \"hasPointInTime\": ts,\n            \"atLocation\": location_id,\n            \"resourceQuantity\": {\n              \"hasUnit\": unit_id, \n              \"hasNumericalValue\": amount \n            }\n        }\n    };\n    \n// To get this in the debug output\nmsg.variables = variables;\n\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n  query:    `mutation($event:EconomicEventCreateParams!) {\n                createEconomicEvent(event:$event) {\n                    economicEvent {\n                        id\n                        provider {\n                            id\n                            name\n                            note\n                        }\n                        resourceQuantity {\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n                        }\n                        toResourceInventoriedAs { \n                            id\n                            name\n                            onhandQuantity {\n                                hasNumericalValue\n                                hasUnit {\n                                    label\n                                    symbol\n                                }\n                            }\n                            accountingQuantity {\n                                hasNumericalValue\n                                hasUnit {\n                                    label\n                                    symbol\n                                }\n                            }\n                            primaryAccountable {\n                            id\n                          }\n                        }\n                        resourceInventoriedAs {\n                            id\n                            name\n                            onhandQuantity {\n                                hasNumericalValue\n                                hasUnit {\n                                    label\n                                    symbol\n                                }\n                            }\n                            accountingQuantity {\n                                hasNumericalValue\n                                hasUnit {\n                                    label\n                                    symbol\n                                }\n                            }\n                            primaryAccountable {\n                            id\n                          }\n                        }\n                    }\n                }\n            }`,\n    variables: variables\n})\n\n\nreturn msg;",
+        "name": "Data to sign",
+        "func": "// Call specific data\nconst note = msg.payload.note;\nconst provider_id = msg.payload.provider_id;\nconst receiver_id = msg.payload.receiver_id;\nconst resource_id = msg.payload.resource_id;\nconst resource_name = msg.payload.resource_name;\nconst unit_id = msg.payload.unit_id;\nconst amount = msg.payload.amount;\nconst location_id = msg.payload.location_id;\n\n// Produce the query and variables vars to be signed\nconst ts = new Date(Date.now());\nconst variables = {\n        \"event\": {\n            \"note\": note,\n            \"action\": \"transfer-custody\",\n            \"provider\": provider_id, \n            \"receiver\": receiver_id, \n            \"resourceInventoriedAs\": resource_id,\n            \"hasPointInTime\": ts,\n            \"atLocation\": location_id,\n            \"resourceQuantity\": {\n              \"hasUnit\": unit_id, \n              \"hasNumericalValue\": amount \n            }\n        },\n        \"newInventoriedResource\": {\n            \"name\" : resource_name\n        }\n    };\n    \nconst query = `mutation($event:EconomicEventCreateParams!, $newInventoriedResource: EconomicResourceCreateParams) {\n                createEconomicEvent(event:$event, newInventoriedResource:$newInventoriedResource) {\n                    economicEvent {\n                        id\n                        provider {\n                            id\n                            name\n                            note\n                        }\n                        resourceQuantity {\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n                        }\n                        toResourceInventoriedAs { \n                            id\n                            name\n                            onhandQuantity {\n                                hasNumericalValue\n                                hasUnit {\n                                    label\n                                    symbol\n                                }\n                            }\n                            accountingQuantity {\n                                hasNumericalValue\n                                hasUnit {\n                                    label\n                                    symbol\n                                }\n                            }\n                            primaryAccountable {\n                            id\n                          }\n                        }\n                        resourceInventoriedAs {\n                            id\n                            name\n                            onhandQuantity {\n                                hasNumericalValue\n                                hasUnit {\n                                    label\n                                    symbol\n                                }\n                            }\n                            accountingQuantity {\n                                hasNumericalValue\n                                hasUnit {\n                                    label\n                                    symbol\n                                }\n                            }\n                            primaryAccountable {\n                            id\n                          }\n                        }\n                    }\n                }\n            }`;\n\n\n// Store the variables for later processing\nmsg.variables = variables\n          \n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 250,
-        "y": 1120,
+        "x": 270,
+        "y": 1400,
         "wires": [
             [
-                "1f51d816c9254a8e",
-                "78bbd41a6c118d6b"
+                "78bbd41a6c118d6b",
+                "0d1e2c183fa42697"
             ]
         ]
     },
@@ -690,8 +691,8 @@
         "name": "",
         "statusCode": "",
         "headers": {},
-        "x": 930,
-        "y": 1240,
+        "x": 990,
+        "y": 1160,
         "wires": []
     },
     {
@@ -705,8 +706,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
-        "y": 1240,
+        "x": 820,
+        "y": 1160,
         "wires": [
             [
                 "fe5db33a07f08de1"
@@ -727,12 +728,12 @@
         "proxy": "",
         "authType": "",
         "senderr": false,
-        "x": 450,
-        "y": 1240,
+        "x": 630,
+        "y": 1160,
         "wires": [
             [
-                "2fdd738ccee21e9c",
-                "d1f6e59d5ba1e759"
+                "d1f6e59d5ba1e759",
+                "2fdd738ccee21e9c"
             ]
         ]
     },
@@ -740,38 +741,21 @@
         "id": "1239e8ccc0e65584",
         "type": "function",
         "z": "a9cf961a3a52160c",
-        "name": "Create Event",
-        "func": "// Reset the headears\nmsg.headers = {};\nmsg.headers['content-type'] = 'application/json';\nmsg.headers['authorization'] = \"Bearer \" + msg.payload.token;\n\n\nmsg.url = msg.payload.endpoint;\nmsg.method = 'POST';\n\nvar variables = {\n        \"event\": {\n            \"note\": msg.payload.note,\n            \"action\": msg.payload.action\n        }\n};\n\nvariables.event.hasPointInTime = new Date(Date.now());\n\nif ( msg.payload.provider_id != undefined ){\n    variables.event.provider = msg.payload.provider_id;\n}\n\nif ( msg.payload.receiver_id != undefined ){\n    variables.event.receiver = msg.payload.receiver_id;\n}\n\nif ( msg.payload.processIn_id != undefined ){\n    variables.event.inputOf = msg.payload.processIn_id;\n}\n\nif ( msg.payload.processOut_id != undefined ){\n    variables.event.outputOf = msg.payload.processOut_id;\n}\n\nif ( msg.payload.unit_id != undefined && msg.payload.amount != undefined){\n    variables.event.resourceQuantity = {};\n    variables.event.resourceQuantity.hasUnit = msg.payload.unit_id;\n    variables.event.resourceQuantity.hasNumericalValue = msg.payload.amount;\n}\n\nif ( msg.payload.resource_id != undefined ){\n    variables.event.resourceInventoriedAs = msg.payload.resource_id;\n}\n\nif ( msg.payload.classification != undefined ){\n    variables.event.resourceConformsTo = msg.payload.classification;\n}\n\nif ( msg.payload.resource_name != undefined ){\n    variables.newInventoriedResource = {};\n    variables.newInventoriedResource.name = msg.payload.resource_name;\n}\n\nif ( msg.payload.resourcetrack_id != undefined ){\n    // we imply here that there is also a resource_name, otherwise bomb\n    variables.newInventoriedResource.trackingIdentifier = msg.payload.resourcetrack_id;\n}\n\n\n\n// To get this in the debug output\nmsg.variables = variables\n\nconst resource_quantity = `\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n\n`;\n\nconst resource_body = `\n                            id\n                            name\n                            onhandQuantity {` +\n                                resource_quantity +\n                            `}\n                            accountingQuantity {` +\n                                resource_quantity +\n                            `}\n                            primaryAccountable {\n                            id\n                          }\n`;\n\nconst response = `economicEvent {\n                        id\n                        provider {\n                            id\n                            name\n                            note\n                        }\n                        resourceQuantity {\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n                        }\n                        toResourceInventoriedAs {` +\n                            resource_body +\n                        `}\n                        resourceInventoriedAs {` +\n                            resource_body +\n                        `\n                        }\n                    },\n                    economicResource {` +\n                        resource_body +\n                    `}\n                    `;\n                    \nvar mutation = '';\n\nif (variables.newInventoriedResource != undefined){\n    mutation = `mutation($event:EconomicEventCreateParams!, $newInventoriedResource: EconomicResourceCreateParams) {\n                createEconomicEvent(event:$event, newInventoriedResource:$newInventoriedResource) {` +\n                    response +\n                `}\n            }`;\n}else{\n    mutation = `mutation($event:EconomicEventCreateParams!) {\n                createEconomicEvent(event:$event) {` +\n                    response +\n                `}\n            }`;\n}\n// This is going to destroy the msg.payload!!!\nmsg.payload = JSON.stringify({\n    query:    mutation,\n    variables: variables\n})\n\n\nreturn msg;",
+        "name": "Data to sign",
+        "func": "// Produce the query and variables vars to be signed\nvar variables = {\n        \"event\": {\n            \"note\": msg.payload.note,\n            \"action\": msg.payload.action\n        }\n};\n\nvariables.event.hasPointInTime = new Date(Date.now());\n\nif ( msg.payload.provider_id != undefined ){\n    variables.event.provider = msg.payload.provider_id;\n}\n\nif ( msg.payload.receiver_id != undefined ){\n    variables.event.receiver = msg.payload.receiver_id;\n}\n\nif ( msg.payload.processIn_id != undefined ){\n    variables.event.inputOf = msg.payload.processIn_id;\n}\n\nif ( msg.payload.processOut_id != undefined ){\n    variables.event.outputOf = msg.payload.processOut_id;\n}\n\nif ( msg.payload.unit_id != undefined && msg.payload.amount != undefined){\n    variables.event.resourceQuantity = {};\n    variables.event.resourceQuantity.hasUnit = msg.payload.unit_id;\n    variables.event.resourceQuantity.hasNumericalValue = msg.payload.amount;\n}\n\nif ( msg.payload.resource_id != undefined ){\n    variables.event.resourceInventoriedAs = msg.payload.resource_id;\n}\n\nif ( msg.payload.classification != undefined ){\n    variables.event.resourceConformsTo = msg.payload.classification;\n}\n\nif ( msg.payload.resource_name != undefined ){\n    variables.newInventoriedResource = {};\n    variables.newInventoriedResource.name = msg.payload.resource_name;\n}\n\nif ( msg.payload.resourcetrack_id != undefined ){\n    // we imply here that there is also a resource_name, otherwise bomb\n    variables.newInventoriedResource.trackingIdentifier = msg.payload.resourcetrack_id;\n}\n\nconst resource_quantity = `\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n\n`;\n\nconst resource_body = `\n                            id\n                            name\n                            onhandQuantity {` +\n                                resource_quantity +\n                            `}\n                            accountingQuantity {` +\n                                resource_quantity +\n                            `}\n                            primaryAccountable {\n                            id\n                          }\n`;\n\nconst response = `economicEvent {\n                        id\n                        provider {\n                            id\n                            name\n                            note\n                        }\n                        resourceQuantity {\n                            hasNumericalValue\n                            hasUnit {\n                                label\n                                symbol\n                            }\n                        }\n                        toResourceInventoriedAs {` +\n                            resource_body +\n                        `}\n                        resourceInventoriedAs {` +\n                            resource_body +\n                        `\n                        }\n                    }`;\n                    \nvar mutation = '';\n\nif (variables.newInventoriedResource != undefined){\n    mutation = `mutation($event:EconomicEventCreateParams!, $newInventoriedResource: EconomicResourceCreateParams) {\n                createEconomicEvent(event:$event, newInventoriedResource:$newInventoriedResource) {` +\n                    response +\n                `}\n            }`;\n}else{\n    mutation = `mutation($event:EconomicEventCreateParams!) {\n                createEconomicEvent(event:$event) {` +\n                    response +\n                `}\n            }`;\n}\n\nconst query = mutation;\n\n// Store the variables for later processing\nmsg.variables = variables\n          \n// Define data for signature\nconst eddsa = msg.payload.eddsa;\nconst username = msg.payload.username;\n\nmsg.sign = {};\n\nmsg.sign.query = query;\nmsg.sign.eddsa = eddsa;\nmsg.sign.username = username;\n\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 230,
-        "y": 1240,
+        "x": 270,
+        "y": 1160,
         "wires": [
             [
-                "9395b1d5f101d921",
+                "148fb20edbee43b8",
                 "2fdd738ccee21e9c"
             ]
         ]
-    },
-    {
-        "id": "2fdd738ccee21e9c",
-        "type": "debug",
-        "z": "a9cf961a3a52160c",
-        "name": "",
-        "active": false,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "targetType": "full",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 610,
-        "y": 1300,
-        "wires": []
     },
     {
         "id": "1b77e1551252bd55",
@@ -783,11 +767,10 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 110,
-        "y": 1240,
+        "y": 1160,
         "wires": [
             [
-                "1239e8ccc0e65584",
-                "2fdd738ccee21e9c"
+                "1239e8ccc0e65584"
             ]
         ]
     },
@@ -799,7 +782,7 @@
         "statusCode": "",
         "headers": {},
         "x": 930,
-        "y": 1360,
+        "y": 1500,
         "wires": []
     },
     {
@@ -814,7 +797,7 @@
         "finalize": "",
         "libs": [],
         "x": 700,
-        "y": 1360,
+        "y": 1500,
         "wires": [
             [
                 "17b272e3686339f5"
@@ -836,7 +819,7 @@
         "authType": "",
         "senderr": false,
         "x": 450,
-        "y": 1360,
+        "y": 1500,
         "wires": [
             [
                 "04a7b53f4308dcdd",
@@ -855,8 +838,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 240,
-        "y": 1360,
+        "x": 280,
+        "y": 1500,
         "wires": [
             [
                 "9b5733fa43a0796d"
@@ -877,7 +860,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 610,
-        "y": 1420,
+        "y": 1560,
         "wires": []
     },
     {
@@ -890,7 +873,7 @@
         "upload": false,
         "swaggerDoc": "",
         "x": 100,
-        "y": 1360,
+        "y": 1500,
         "wires": [
             [
                 "2db04210e5b35643"
@@ -934,7 +917,7 @@
         "name": "Create event Transfer-custody",
         "info": "",
         "x": 160,
-        "y": 1080,
+        "y": 1360,
         "wires": []
     },
     {
@@ -944,7 +927,7 @@
         "name": "Create events with other actions",
         "info": "",
         "x": 170,
-        "y": 1200,
+        "y": 1120,
         "wires": []
     },
     {
@@ -1384,6 +1367,65 @@
         "wires": [
             [
                 "75ad1ae27b0775fb"
+            ]
+        ]
+    },
+    {
+        "id": "b1dddf12ee1a9e24",
+        "type": "subflow:f781100da59ddc5d",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "x": 450,
+        "y": 980,
+        "wires": [
+            [
+                "cf36936a5c75bfd6",
+                "6905f51ee38526b3"
+            ]
+        ]
+    },
+    {
+        "id": "148fb20edbee43b8",
+        "type": "subflow:f781100da59ddc5d",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "x": 450,
+        "y": 1160,
+        "wires": [
+            [
+                "9395b1d5f101d921",
+                "2fdd738ccee21e9c"
+            ]
+        ]
+    },
+    {
+        "id": "2fdd738ccee21e9c",
+        "type": "debug",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 610,
+        "y": 1240,
+        "wires": []
+    },
+    {
+        "id": "0d1e2c183fa42697",
+        "type": "subflow:f781100da59ddc5d",
+        "z": "a9cf961a3a52160c",
+        "name": "",
+        "x": 450,
+        "y": 1400,
+        "wires": [
+            [
+                "1f51d816c9254a8e",
+                "78bbd41a6c118d6b"
             ]
         ]
     }

@@ -133,7 +133,7 @@ function createProcess {
 
 function transferCustody {
     sign_body="\"eddsa\" : \"${1}\", \"username\" : \"${2}\""
-    body="{${sign_body}, \"provider_id\" : \"${3}\", \"receiver_id\" : \"${4}\", \"resource_id\" : \"${5}\", \"unit_id\" : \"${6}\", \"amount\" : ${7}, \"location_id\" : \"${8}\", \"note\": \"${9}\", \"endpoint\" : \"${my_endpoint}\" }"
+    body="{${sign_body}, \"provider_id\" : \"${3}\", \"receiver_id\" : \"${4}\", \"resource_name\" : \"${5}\", \"resource_id\" : \"${6}\", \"unit_id\" : \"${7}\", \"amount\" : ${8}, \"location_id\" : \"${9}\", \"note\": \"${10}\", \"endpoint\" : \"${my_endpoint}\" }"
     result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createTransfer 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
@@ -157,24 +157,25 @@ function createResource {
 
 function createEvent {
     
-    action=${1}
-    common_body="\"action\" : \"${action}\", \"eddsa\" : \"${2}\",  \"note\": \"${3}\", \"provider_id\" : \"${4}\", \"receiver_id\" : \"${5}\", \"unit_id\" : \"${6}\", \"amount\" : ${7}, \"endpoint\" : \"${my_endpoint}\""
+    sign_body="\"eddsa\" : \"${1}\", \"username\" : \"${2}\""
+    action=${3}
+    common_body="${sign_body}, \"action\" : \"${action}\", \"note\": \"${4}\", \"provider_id\" : \"${5}\", \"receiver_id\" : \"${6}\", \"unit_id\" : \"${7}\", \"amount\" : ${8}, \"endpoint\" : \"${my_endpoint}\""
 
     case "${action}" in
         "work")
-            body="{${common_body}, \"processIn_id\" : \"${8}\", \"classification\": \"${9}\"}"
+            body="{${common_body}, \"processIn_id\" : \"${9}\", \"classification\": \"${10}\"}"
         ;;
         "accept")
-            body="{${common_body}, \"processIn_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
+            body="{${common_body}, \"processIn_id\" : \"${9}\", \"resource_id\" : \"${10}\"}"
         ;;
         "modify")
-            body="{${common_body}, \"processOut_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
+            body="{${common_body}, \"processOut_id\" : \"${9}\", \"resource_id\" : \"${10}\"}"
         ;;
         "consume")
-            body="{${common_body}, \"processIn_id\" : \"${8}\", \"resource_id\" : \"${9}\"}"
+            body="{${common_body}, \"processIn_id\" : \"${9}\", \"resource_id\" : \"${10}\"}"
         ;;
         "produce")
-            body="{${common_body}, \"processOut_id\" : \"${8}\", \"resourcetrack_id\" : \"${9}\", \"resource_name\" : \"${10}\", \"classification\": \"${11}\"}"
+            body="{${common_body}, \"processOut_id\" : \"${9}\", \"resourcetrack_id\" : \"${10}\", \"resource_name\" : \"${11}\", \"classification\": \"${12}\"}"
         ;;
         *)
             echo "Please specify a valid action"
@@ -184,6 +185,7 @@ function createEvent {
     result=$(curl -X POST -H "Content-Type: application/json" -d "${body}" ${my_nodered}/createEvent 2>/dev/null)
     json_result="{\"result\": $result, \"body\": $body}"
     echo ${json_result}
+    # echo ${body}
 }
 
 function traceTrack {
@@ -424,10 +426,9 @@ then
     echo "DEBUG: $(date) -  result is: ${result}"
 fi
 echo "$(date) - Created 100 kg soap with tracking id: ${soap_trackid}, id: ${soap_id} owned by the cleaner, event id: ${event_id}"
-exit
 
 note='Specification for water to be used to wash the gowns'
-result=$(createResourceSpec ${cleaner_seed} "${volume_unit}" "Water" "${note}" "https://www.wikidata.org/wiki/Q283")
+result=$(createResourceSpec ${eddsa_cleaner} "${cleaner_username}" "${volume_unit}" "Water" "${note}" "https://www.wikidata.org/wiki/Q283")
 water_spec_id=$(echo ${result} | jq -r '.result.specId')
 if [ "${do_debug} " == "true " ]
 then
@@ -436,7 +437,7 @@ fi
 echo "$(date) - Created ${note} with spec id: ${water_spec_id}"
 
 water_trackid="water-${RANDOM}"
-result=$(createResource ${cleaner_seed} "${cleaner_id}" "Water" ${water_trackid} "${volume_unit}" 50 ${water_spec_id})
+result=$(createResource ${eddsa_cleaner} "${cleaner_username}" "${cleaner_id}" "Water" ${water_trackid} "${volume_unit}" 50 ${water_spec_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 water_id=$(echo ${result} | jq -r '.result.resourceId')
 if [ "${do_debug} " == "true " ]
@@ -446,7 +447,7 @@ fi
 echo "$(date) - Created 50 liters water with tracking id: ${water_trackid}, id: ${water_id} owned by the cleaner, event id: ${event_id}"
 
 note='Specification for cotton to be used to sew the gowns'
-result=$(createResourceSpec ${cleaner_seed} "${mass_unit}" "Cotton" "${note}" "https://www.wikidata.org/wiki/Q11457")
+result=$(createResourceSpec ${eddsa_cleaner} "${cleaner_username}" "${mass_unit}" "Cotton" "${note}" "https://www.wikidata.org/wiki/Q11457")
 cotton_spec_id=$(echo ${result} | jq -r '.result.specId')
 if [ "${do_debug} " == "true " ]
 then
@@ -455,7 +456,7 @@ fi
 echo "$(date) - Created ${note} with spec id: ${cotton_spec_id}"
 
 cotton_trackid="cotton-${RANDOM}"
-result=$(createResource ${cleaner_seed} "${cleaner_id}" "Cotton" ${cotton_trackid} "${mass_unit}" 20 ${cotton_spec_id})
+result=$(createResource ${eddsa_cleaner} "${cleaner_username}" "${cleaner_id}" "Cotton" ${cotton_trackid} "${mass_unit}" 20 ${cotton_spec_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 cotton_id=$(echo ${result} | jq -r '.result.resourceId')
 if [ "${do_debug} " == "true " ]
@@ -465,7 +466,7 @@ fi
 echo "$(date) - Created 20 kg cotton with tracking id: ${cotton_trackid}, id: ${cotton_id} owned by the cleaner, event id: ${event_id}"
 
 note='Specification for gowns'
-result=$(createResourceSpec ${cleaner_seed} "${piece_unit}" "Gown" "${note}" "https://www.wikidata.org/wiki/Q89990310")
+result=$(createResourceSpec ${eddsa_cleaner} "${cleaner_username}" "${piece_unit}" "Gown" "${note}" "https://www.wikidata.org/wiki/Q89990310")
 gown_spec_id=$(echo ${result} | jq -r '.result.specId')
 if [ "${do_debug} " == "true " ]
 then
@@ -473,8 +474,9 @@ then
 fi
 echo "$(date) - Created ${note} with spec id: ${gown_spec_id}"
 
+eddsa_hosp=$(cat ${hosp_cred_file} | jq -r '.keyring.eddsa')
 note='Specification for surgical operation'
-result=$(createResourceSpec ${hospital_seed} "${time_unit}" "Surgical operation" "${note}" "https://www.wikidata.org/wiki/Q600236")
+result=$(createResourceSpec ${eddsa_hosp} "${hospital_username}" "${time_unit}" "Surgical operation" "${note}" "https://www.wikidata.org/wiki/Q600236")
 surgery_spec_id=$(echo ${result} | jq -r '.result.specId')
 if [ "${do_debug} " == "true " ]
 then
@@ -486,7 +488,7 @@ echo "$(date) - Created ${note} with spec id: ${surgery_spec_id}"
 ##### First we create the gown from the cotton
 ################################################################################
 process_name='Process sew gown'
-result=$(createProcess ${cleaner_seed} "${process_name}" "Sew gown process performed by ${cleaner_name}")
+result=$(createProcess ${eddsa_cleaner} "${cleaner_username}" "${process_name}" "Sew gown process performed by ${cleaner_name}")
 sewgownprocess_id=$(echo ${result} | jq -r '.result.processId')
 if [ "${do_debug} " == "true " ]
 then
@@ -495,7 +497,7 @@ fi
 echo "$(date) - Created process: ${process_name}, process id: ${sewgownprocess_id}"
 
 event_note='consume cotton for sewing'
-result=$(createEvent "consume" ${cleaner_seed} "${event_note}" ${cleaner_id} ${cleaner_id} ${mass_unit} 10 ${sewgownprocess_id} ${cotton_id})
+result=$(createEvent ${eddsa_cleaner} "${cleaner_username}" "consume" "${event_note}" ${cleaner_id} ${cleaner_id} ${mass_unit} 10 ${sewgownprocess_id} ${cotton_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 if [ "${do_debug} " == "true " ]
 then
@@ -505,7 +507,7 @@ echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action cons
 
 event_note='produce gown'
 gown_trackid="gown-${RANDOM}"
-result=$(createEvent "produce" ${cleaner_seed} "${event_note}" ${cleaner_id} ${cleaner_id} ${piece_unit} 1 ${sewgownprocess_id} ${gown_trackid} "Gown" ${gown_spec_id})
+result=$(createEvent ${eddsa_cleaner} "${cleaner_username}" "produce" "${event_note}" ${cleaner_id} ${cleaner_id} ${piece_unit} 1 ${sewgownprocess_id} ${gown_trackid} "Gown" ${gown_spec_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 gown_id=$(echo ${result} | jq -r '.result.resourceId')
 if [ "${do_debug} " == "true " ]
@@ -529,9 +531,9 @@ echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action prod
 ##### The cleaner is still the primary accountable
 ################################################################################
 transfer_note='Transfer gowns to hospital'
-result=$(transferCustody ${cleaner_seed} ${cleaner_id} ${hospital_id} ${gown_id} ${piece_unit} 1 ${lochospital_id} "${transfer_note}")
-event_id=$(echo ${result} | jq -r '.result.eventID')
-gown_transferred_id=$(echo ${result} | jq -r '.result.transferredID')
+result=$(transferCustody ${eddsa_cleaner} "${cleaner_username}" ${cleaner_id} ${hospital_id} "Gown" ${gown_id} ${piece_unit} 1 ${lochospital_id} "${transfer_note}")
+event_id=$(echo ${result} | jq -r '.result.eventId')
+gown_transferred_id=$(echo ${result} | jq -r '.result.transferredId')
 if [ "${do_debug} " == "true " ]
 then
     echo "DEBUG: $(date) -  result is: ${result}"
@@ -542,7 +544,7 @@ echo "$(date) - Transferred custody of 1 gown to hospital with note: ${transfer_
 ##### Perform the process at the hospital
 ################################################################################
 process_name='Process Use Gown'
-result=$(createProcess ${hospital_seed} "${process_name}" "Use gown process performed at ${hospital_name}")
+result=$(createProcess ${eddsa_hosp} "${hospital_username}" "${process_name}" "Use gown process performed at ${hospital_name}")
 useprocess_id=$(echo ${result} | jq -r '.result.processId')
 if [ "${do_debug} " == "true " ]
 then
@@ -551,7 +553,7 @@ fi
 echo "$(date) - Created process: ${process_name}, process id: ${useprocess_id}"
 
 event_note='work perform surgery'
-result=$(createEvent "work" ${hospital_seed} "${event_note}" ${hospital_id} ${hospital_id} ${time_unit} 80 ${useprocess_id} ${surgery_spec_id})
+result=$(createEvent ${eddsa_hosp} "${hospital_username}" "work" "${event_note}" ${hospital_id} ${hospital_id} ${time_unit} 80 ${useprocess_id} ${surgery_spec_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 if [ "${do_debug} " == "true " ]
 then
@@ -560,7 +562,7 @@ fi
 echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action work 80 hours as input for process: ${useprocess_id}"
 
 event_note='accept use for surgery'
-result=$(createEvent "accept" ${hospital_seed} "${event_note}" ${hospital_id} ${hospital_id} ${piece_unit} 1 ${useprocess_id} ${gown_transferred_id})
+result=$(createEvent ${eddsa_hosp} "${hospital_username}" "accept" "${event_note}" ${hospital_id} ${hospital_id} ${piece_unit} 1 ${useprocess_id} ${gown_transferred_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 if [ "${do_debug} " == "true " ]
 then
@@ -569,7 +571,7 @@ fi
 echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action accept 1 gown as input for process: ${useprocess_id}"
 
 event_note='modify dirty after use'
-result=$(createEvent "modify" ${hospital_seed} "${event_note}" ${hospital_id} ${hospital_id} ${piece_unit} 1 ${useprocess_id} ${gown_transferred_id})
+result=$(createEvent ${eddsa_hosp} "${hospital_username}" "modify" "${event_note}" ${hospital_id} ${hospital_id} ${piece_unit} 1 ${useprocess_id} ${gown_transferred_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 if [ "${do_debug} " == "true " ]
 then
@@ -581,9 +583,9 @@ echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action modi
 ##### Transfer back to the owner (the cleaner)
 ################################################################################
 transfer_note='Transfer gowns to cleaner'
-result=$(transferCustody ${hospital_seed} ${hospital_id} ${cleaner_id} ${gown_transferred_id} ${piece_unit} 1 ${loccleaner_id} "${transfer_note}")
-event_id=$(echo ${result} | jq -r '.result.eventID')
-gown_transferred_back_id=$(echo ${result} | jq -r '.result.transferredID')
+result=$(transferCustody ${eddsa_hosp} "${hospital_username}" ${hospital_id} ${cleaner_id} "Gown" ${gown_transferred_id} ${piece_unit} 1 ${loccleaner_id} "${transfer_note}")
+event_id=$(echo ${result} | jq -r '.result.eventId')
+gown_transferred_back_id=$(echo ${result} | jq -r '.result.transferredId')
 
 if [ "${do_debug} " == "true " ]
 then
@@ -595,7 +597,7 @@ echo "$(date) - Transferred custody of 1 gown to cleaner with note: ${transfer_n
 ##### Perform the process at the cleaner
 ################################################################################
 process_name='Process Clean Gown'
-result=$(createProcess ${cleaner_seed} "${process_name}" "Clean gown process performed at ${cleaner_name}")
+result=$(createProcess ${eddsa_cleaner} "${cleaner_username}" "${process_name}" "Clean gown process performed at ${cleaner_name}")
 cleanprocess_id=$(echo ${result} | jq -r '.result.processId')
 if [ "${do_debug} " == "true " ]
 then
@@ -604,7 +606,7 @@ fi
 echo "$(date) - Created process: ${process_name}, process id: ${cleanprocess_id}"
 
 event_note='accept gowns to be cleaned'
-result=$(createEvent "accept" ${cleaner_seed} "${event_note}" ${cleaner_id} ${cleaner_id} ${piece_unit} 1 ${cleanprocess_id} ${gown_transferred_back_id})
+result=$(createEvent ${eddsa_cleaner} "${cleaner_username}" "accept" "${event_note}" ${cleaner_id} ${cleaner_id} ${piece_unit} 1 ${cleanprocess_id} ${gown_transferred_back_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 if [ "${do_debug} " == "true " ]
 then
@@ -613,7 +615,7 @@ fi
 echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action accept 1 gown as input for process: ${cleanprocess_id}"
 
 event_note='consume water for the washing'
-result=$(createEvent "consume" ${cleaner_seed} "${event_note}" ${cleaner_id} ${cleaner_id} ${volume_unit} 25 ${cleanprocess_id} ${water_id})
+result=$(createEvent ${eddsa_cleaner} "${cleaner_username}" "consume" "${event_note}" ${cleaner_id} ${cleaner_id} ${volume_unit} 25 ${cleanprocess_id} ${water_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 if [ "${do_debug} " == "true " ]
 then
@@ -622,7 +624,7 @@ fi
 echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action consume 25 liters water as input for process: ${cleanprocess_id}"
 
 event_note='consume soap for the washing'
-result=$(createEvent "consume" ${cleaner_seed} "${event_note}" ${cleaner_id} ${cleaner_id} ${mass_unit} 50 ${cleanprocess_id} ${soap_id})
+result=$(createEvent ${eddsa_cleaner} "${cleaner_username}" "consume" "${event_note}" ${cleaner_id} ${cleaner_id} ${mass_unit} 50 ${cleanprocess_id} ${soap_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 if [ "${do_debug} " == "true " ]
 then
@@ -631,7 +633,7 @@ fi
 echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action consume 50 kg soap as input for process: ${cleanprocess_id}"
 
 event_note='modify clean after washing'
-result=$(createEvent "modify" ${cleaner_seed} "${event_note}" ${cleaner_id} ${cleaner_id} ${piece_unit} 1 ${cleanprocess_id} ${gown_transferred_back_id})
+result=$(createEvent ${eddsa_cleaner} "${cleaner_username}" "modify" "${event_note}" ${cleaner_id} ${cleaner_id} ${piece_unit} 1 ${cleanprocess_id} ${gown_transferred_back_id})
 event_id=$(echo ${result} | jq -r '.result.eventId')
 if [ "${do_debug} " == "true " ]
 then
@@ -639,6 +641,7 @@ then
 fi
 echo "$(date) - Created event: ${event_note}, event id: ${event_id}, action modify 1 gown as output of process: ${cleanprocess_id}"
 
+exit 0
 echo "$(date) - Doing trace and track gown: ${gown_transferred_back_id}"
 result=$(traceTrack ${gown_transferred_back_id} 10)
 
